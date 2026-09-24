@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Admin Panel</title>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDbkK1inremaHQDtUrB-DX5CkvcAeihieY",
+  authDomain: "quizdb-9db17.firebaseapp.com",
+  projectId: "quizdb-9db17",
+  storageBucket: "quizdb-9db17.firebasestorage.app",
+  messagingSenderId: "1064062597943",
+  appId: "1:1064062597943:web:be4d3f136a370e5181f8b2"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const provider = new GoogleAuthProvider();
+
+let uid = null;
+let isAdmin = false;
+
+const ADMIN_UID = "LuI6YGELl2VHf7ywbbyV93s1ilq1";
+
+window.login = async function () {
+  await signInWithPopup(auth, provider);
+};
+
+function isExpired(expiry) {
+  if (!expiry) return false;
+  return Date.now() > expiry;
+}
+
+async function checkAdmin(user) {
+  uid = user.uid;
+
+  if (uid === ADMIN_UID) {
+    isAdmin = true;
+    document.getElementById("status").innerText = "Admin Logged In";
+    loadUsersDropdown();
+    loadData();
+  } else {
+    document.getElementById("status").innerText = "Access Denied";
+  }
+}
+
+window.loadUsersDropdown = async function () {
+  const usersSnap = await getDocs(collection(db, "users"));
+  const select = document.getElementById("userSelect");
+  select.innerHTML = "";
+
+  usersSnap.forEach(d => {
+    const option = document.createElement("option");
+    option.value = d.id;
+    option.textContent = d.id;
+    select.appendChild(option);
+  });
+};
+
+window.privateData = async function () {
+  if (!isAdmin) return;
+
+  const userId = document.getElementById("userSelect").value;
+  const d1 = document.getElementById("d1").value;
+  const m1 = document.getElementById("m1").value;
+
+  await setDoc(doc(db, "users", userId, "privateData", d1), {
+    value: m1,
+    createdAt: Date.now()
+  });
+
+  alert("Private Data Saved");
+  loadData();
+};
+
+window.updateReadOnlyData = async function () {
+  if (!isAdmin) return;
+
+  const userId = document.getElementById("userSelect").value;
+  const d1 = document.getElementById("d1").value;
+  const m1 = document.getElementById("m1").value;
+  const e1 = document.getElementById("e1").value;
+
+  const expiry = e1 ? new Date(e1).getTime() : null;
+
+  await setDoc(doc(db, "users", userId, "readOnlyData", d1), {
+    value: m1,
+    updatedAt: Date.now(),
+    expiry: expiry
+  });
+
+  alert("Read Only Data Updated");
+  loadData();
+};
+
+window.deleteExpired = async function (userId, colName) {
+  if (!userId) return;
+
+  const snap = await getDocs(collection(db, "users", userId, colName));
+
+  for (const d of snap.docs) {
+    const data = d.data();
+    if (isExpired(data.expiry)) {
+      await deleteDoc(doc(db, "users", userId, colName, d.id));
+    }
+  }
+
+  loadData();
+};
+
+window.loadData = async function () {
+  if (!isAdmin) return;
+
+  let html = "";
+
+  const users = await getDocs(collection(db, "users"));
+
+  for (const user of users.docs) {
+    const userId = user.id;
+
+    html += "<h3>User: " + userId + "</h3>";
+
+    const privateData = await getDocs(collection(db, "users", userId, "privateData"));
+    html += "<b>Private Data</b><br>";
+
+    privateData.forEach(d => {
+      const data = d.data();
+      html += "<pre>" + JSON.stringify(data, null, 2) + "</pre>";
+    });
+
+    const readOnly = await getDocs(collection(db, "users", userId, "readOnlyData"));
+    html += "<b>Read Only Data</b><br>";
+
+    readOnly.forEach(d => {
+      const data = d.data();
+      if (isExpired(data.expiry)) return;
+
+      html += "<pre>" + JSON.stringify(data, null, 2) + "</pre>";
+    });
+
+    const hiddenA = await getDocs(collection(db, "users", userId, "hiddenDataA"));
+    html += "<b>Hidden Data A</b><br>";
+
+    hiddenA.forEach(d => {
+      html += "<pre>" + JSON.stringify(d.data(), null, 2) + "</pre>";
+    });
+
+    const hiddenU = await getDocs(collection(db, "users", userId, "hiddenDataU"));
+    html += "<b>Hidden Data U</b><br>";
+
+    hiddenU.forEach(d => {
+      html += "<pre>" + JSON.stringify(d.data(), null, 2) + "</pre>";
+    });
+
+    html += "<hr>";
+  }
+
+  document.getElementById("data").innerHTML = html;
+};
+
+onAuthStateChanged(auth, async (user) => {
+  if (user) checkAdmin(user);
+});
+</script>
+
+<style>
+body { font-family: Arial; padding: 20px; }
+button { padding: 8px; margin: 5px; cursor:pointer; }
+input, select { padding: 8px; margin: 5px; }
+pre { background:#f4f4f4; padding:10px; }
+</style>
+
+</head>
+
+<body>
+
+<h2>Admin Dashboard</h2>
+
+<button onclick="login()">Login with Google</button>
+<p id="status">Not Logged In</p>
+
+<hr>
+
+<h3>Add Data</h3>
+
+<select id="userSelect"></select>
+<input id="d1" placeholder="doc name">
+<input id="m1" placeholder="message">
+<input id="e1" type="date">
+
+<button onclick="privateData()">privateData</button>
+<button onclick="updateReadOnlyData()">update Read Only Data</button>
+
+<hr>
+
+<button onclick="loadUsersDropdown()">Refresh Users</button>
+<button onclick="loadData()">Load Data</button>
+<button onclick="deleteExpired(document.getElementById('userSelect').value,'privateData')">Clean Private</button>
+
+<div id="data"></div>
+
+</body>
+</html>

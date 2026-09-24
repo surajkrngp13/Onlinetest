@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>User Panel</title>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getDatabase, ref, set, get, child } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDbkK1inremaHQDtUrB-DX5CkvcAeihieY",
+  authDomain: "quizdb-9db17.firebaseapp.com",
+  projectId: "quizdb-9db17",
+  storageBucket: "quizdb-9db17.firebasestorage.app",
+  messagingSenderId: "1064062597943",
+  appId: "1:1064062597943:web:be4d3f136a370e5181f8b2"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getDatabase(app);
+const provider = new GoogleAuthProvider();
+
+let uid = null;
+
+window.login = async function () {
+  const res = await signInWithPopup(auth, provider);
+  uid = res.user.uid;
+  document.getElementById("status").innerText = res.user.email;
+  loadAll();
+};
+
+async function loadAll() {
+  if (!uid) return;
+
+  let html = "";
+
+  const dbRef = ref(db);
+
+  // PRIVATE DATA
+  const pSnap = await get(child(dbRef, "users/" + uid + "/privateData"));
+  html += "<h3>Private Data</h3>";
+  if (pSnap.exists()) {
+    const data = pSnap.val();
+    for (let k in data) {
+      html += k + " : " + data[k].value + "<br>";
+    }
+  } else {
+    html += "No Data<br>";
+  }
+
+  // READ ONLY DATA
+  const rSnap = await get(child(dbRef, "users/" + uid + "/readOnlyData"));
+  html += "<h3>ReadOnly Data</h3>";
+  if (rSnap.exists()) {
+    const data = rSnap.val();
+    for (let k in data) {
+      if (Date.now() < data[k].expiry) {
+        html += k + " : " + data[k].value + "<br>";
+      }
+    }
+  } else {
+    html += "No Data<br>";
+  }
+
+  document.getElementById("data").innerHTML = html;
+}
+
+// WRITE PRIVATE
+window.savePrivate = async function () {
+  const key = document.getElementById("p_key").value;
+  const value = document.getElementById("p_val").value;
+
+  await set(ref(db, "users/" + uid + "/privateData/" + key), {
+    value: value,
+    time: Date.now()
+  });
+
+  loadAll();
+};
+
+// WRITE hiddenDataU (write only)
+window.saveHidden = async function () {
+  const key = document.getElementById("h_key").value;
+  const value = document.getElementById("h_val").value;
+
+  await set(ref(db, "users/" + uid + "/hiddenDataU/" + key), {
+    value: value,
+    time: Date.now()
+  });
+
+  alert("Submitted (You cannot see this data)");
+};
+
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    uid = user.uid;
+    document.getElementById("status").innerText = user.email;
+    loadAll();
+  }
+});
+</script>
+
+<style>
+body { font-family: Arial; padding: 20px; }
+input, button { padding: 8px; margin: 5px; }
+.box { border: 1px solid #ccc; padding: 10px; margin-top: 10px; }
+</style>
+
+</head>
+
+<body>
+
+<h2>User Panel</h2>
+
+<button onclick="login()">Login</button>
+<p id="status">Not logged in</p>
+
+<hr>
+
+<h3>Add Private Data</h3>
+<input id="p_key" placeholder="Key">
+<input id="p_val" placeholder="Value">
+<button onclick="savePrivate()">Save</button>
+
+<h3>Submit Hidden Data (write only)</h3>
+<input id="h_key" placeholder="Key">
+<input id="h_val" placeholder="Value">
+<button onclick="saveHidden()">Submit</button>
+
+<hr>
+
+<h3>Your Data</h3>
+<div id="data" class="box"></div>
+
+</body>
+</html>

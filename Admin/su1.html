@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Graduation Level Viewer</title>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDbkK1inremaHQDtUrB-DX5CkvcAeihieY",
+  authDomain: "quizdb-9db17.firebaseapp.com",
+  projectId: "quizdb-9db17",
+  storageBucket: "quizdb-9db17.firebasestorage.app",
+  messagingSenderId: "1064062597943",
+  appId: "1:1064062597943:web:be4d3f136a370e5181f8b2"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const provider = new GoogleAuthProvider();
+
+window.login = () => signInWithPopup(auth, provider);
+window.logout = () => signOut(auth);
+
+async function loadData(user) {
+  const ref = doc(db, "maindb", "bihar", "bssc", "graduationlevel");
+  const snap = await getDoc(ref);
+
+  if (snap.exists()) {
+    const data = snap.data();
+    document.getElementById("output").innerText = JSON.stringify(data, null, 2);
+  } else {
+    document.getElementById("output").innerText = "No data found";
+  }
+}
+
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    document.getElementById("status").innerText = "Logged in: " + user.email;
+    loadData(user);
+  } else {
+    document.getElementById("status").innerText = "Not logged in";
+    document.getElementById("output").innerText = "";
+  }
+});
+</script>
+
+<style>
+body {
+  font-family: Arial;
+  padding: 20px;
+}
+button {
+  margin: 5px;
+  padding: 10px;
+}
+pre {
+  background: #111;
+  color: #0f0;
+  padding: 10px;
+}
+</style>
+</head>
+
+<body>
+
+<h2>Graduation Level Data</h2>
+
+<p id="status">Not logged in</p>
+
+<button onclick="login()">Login</button>
+<button onclick="logout()">Logout</button>
+
+<h3>Data:</h3>
+<pre id="output"></pre>
+
+</body>
+</html>

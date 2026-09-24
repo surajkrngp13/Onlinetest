@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Client Combo Fixed</title>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+// RTDB
+import { getDatabase, ref, set, get, child } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+// FIRESTORE
+import { getFirestore, doc, setDoc, getDoc, getDocs, collection } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDbkK1inremaHQDtUrB-DX5CkvcAeihieY",
+  authDomain: "quizdb-9db17.firebaseapp.com",
+  projectId: "quizdb-9db17",
+  storageBucket: "quizdb-9db17.firebasestorage.app",
+  messagingSenderId: "1064062597943",
+  appId: "1:1064062597943:web:be4d3f136a370e5181f8b2"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const rtdb = getDatabase(app);
+const fsdb = getFirestore(app);
+const provider = new GoogleAuthProvider();
+
+let uid = null;
+
+function log(msg){
+  console.log(msg);
+  document.getElementById("debug").innerHTML += msg + "<br>";
+}
+
+// 🔐 LOGIN
+window.login = async ()=>{
+  const res = await signInWithPopup(auth, provider);
+  uid = res.user.uid;
+};
+
+// 🔄 AUTO LOGIN
+onAuthStateChanged(auth,(user)=>{
+  if(user){
+    uid = user.uid;
+    document.getElementById("status").innerText = "User: "+user.email;
+    loadAll();
+  }
+});
+
+// 🔥 SAVE RTDB PRIVATE
+window.saveRTDB = async ()=>{
+  const key = document.getElementById("key").value;
+  const value = document.getElementById("value").value;
+
+  if(!uid || !key) return alert("login/key required");
+
+  await set(ref(rtdb,"users/"+uid+"/privateData/"+key),{
+    value:value,
+    time:Date.now()
+  });
+
+  log("✅ RTDB saved");
+  loadAll();
+};
+
+// 🔥 SAVE FIRESTORE PRIVATE
+window.saveFS = async ()=>{
+  const key = document.getElementById("key").value;
+  const value = document.getElementById("value").value;
+
+  if(!uid || !key) return alert("login/key required");
+
+  await setDoc(doc(fsdb,"users",uid,"privateData",key),{
+    value:value,
+    time:Date.now()
+  });
+
+  log("✅ Firestore saved");
+  loadAll();
+};
+
+// 🔥 LOAD ALL DATA
+async function loadAll(){
+  if(!uid) return;
+
+  let rhtml="RTDB<br>";
+  let fhtml="Firestore<br>";
+
+  // ================= RTDB =================
+  const p = await get(child(ref(rtdb),"users/"+uid+"/privateData"));
+  if(p.exists()){
+    rhtml += "<b>Private</b><br>";
+    Object.entries(p.val()).forEach(([k,v])=>{
+      rhtml += k+" : "+v.value+"<br>";
+    });
+  }
+
+  const r = await get(child(ref(rtdb),"users/"+uid+"/readOnlyData"));
+  if(r.exists()){
+    rhtml += "<br><b>ReadOnly</b><br>";
+    Object.entries(r.val()).forEach(([k,v])=>{
+      if(v.expiry && Date.now()>v.expiry) return;
+      rhtml += k+" : "+v.value+"<br>";
+    });
+  }
+
+  document.getElementById("rtdb").innerHTML = rhtml;
+
+  // ================= FIRESTORE =================
+
+  // PRIVATE (ALL DOCS)
+  const pSnap = await getDocs(collection(fsdb,"users",uid,"privateData"));
+  fhtml += "<b>Private</b><br>";
+
+  if(pSnap.empty){
+    fhtml += "No private data<br>";
+  }else{
+    pSnap.forEach(d=>{
+      fhtml += d.id+" : "+d.data().value+"<br>";
+    });
+  }
+
+  // READONLY (ALL DOCS)
+  const rSnap = await getDocs(collection(fsdb,"users",uid,"readOnlyData"));
+  fhtml += "<br><b>ReadOnly</b><br>";
+
+  if(rSnap.empty){
+    fhtml += "No readonly data<br>";
+  }else{
+    rSnap.forEach(d=>{
+      const data = d.data();
+      if(data.expiry && Date.now()>data.expiry) return;
+      fhtml += d.id+" : "+data.value+"<br>";
+    });
+  }
+
+  document.getElementById("fs").innerHTML = fhtml;
+}
+
+// 🔎 FIELD FETCH (BOTH DB)
+window.getField = async ()=>{
+  const field = document.getElementById("field").value;
+
+  if(!field) return alert("Enter field");
+
+  // RTDB
+  const rSnap = await get(child(ref(rtdb),"users/"+uid+"/readOnlyData/"+field));
+
+  if(rSnap.exists()){
+    const d = rSnap.val();
+    if(!d.expiry || Date.now()<d.expiry){
+      alert("RTDB: "+d.value);
+    }else{
+      alert("RTDB expired");
+    }
+  }
+
+  // FIRESTORE
+  const fSnap = await getDoc(doc(fsdb,"users",uid,"readOnlyData",field));
+
+  if(fSnap.exists()){
+    const d = fSnap.data();
+    if(!d.expiry || Date.now()<d.expiry){
+      alert("Firestore: "+d.value);
+    }else{
+      alert("Firestore expired");
+    }
+  }
+};
+
+// 🔄 reload
+window.reloadAll = ()=> loadAll();
+
+</script>
+
+<style>
+body{font-family:Arial;padding:20px}
+input,button{padding:8px;margin:5px}
+.box{border:1px solid #ccc;padding:10px;margin-top:10px}
+.debug{background:#000;color:#0f0;height:120px;overflow:auto}
+</style>
+
+</head>
+
+<body>
+
+<h2>Client Combo (RTDB + Firestore)</h2>
+
+<button onclick="login()">Login</button>
+<p id="status">Not logged</p>
+
+<hr>
+
+<h3>Write Private Data</h3>
+
+<input id="key" placeholder="Key">
+<input id="value" placeholder="Value">
+
+<br>
+
+<button onclick="saveRTDB()">Save RTDB</button>
+<button onclick="saveFS()">Save Firestore</button>
+
+<hr>
+
+<h3>Read by Field</h3>
+
+<input id="field" placeholder="Field name">
+<button onclick="getField()">Get Value</button>
+
+<hr>
+
+<button onclick="reloadAll()">Reload</button>
+
+<div id="rtdb" class="box"></div>
+<div id="fs" class="box"></div>
+
+<hr>
+
+<div id="debug" class="debug"></div>
+
+</body>
+</html>

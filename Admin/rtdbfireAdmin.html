@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Admin Panel Final</title>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getDatabase, ref, set, get, child, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDbkK1inremaHQDtUrB-DX5CkvcAeihieY",
+  authDomain: "quizdb-9db17.firebaseapp.com",
+  projectId: "quizdb-9db17",
+  storageBucket: "quizdb-9db17.firebasestorage.app",
+  messagingSenderId: "1064062597943",
+  appId: "1:1064062597943:web:be4d3f136a370e5181f8b2"
+};
+const ADMIN_UIDS = [
+  "LuI6YGELl2VHf7ywbbyV93s1ilq1",
+  "SECOND_ADMIN_UID_HERE"
+];
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getDatabase(app);
+const provider = new GoogleAuthProvider();
+
+// debug expose
+window.db = db;
+window.refDB = ref;
+window.getDB = get;
+
+let uid = null;
+
+function log(msg){
+  console.log(msg);
+  document.getElementById("debug").innerHTML += msg + "<br>";
+}
+
+function isAdmin(){
+  return ADMIN_UIDS.includes(uid);
+}
+
+window.login = async function(){
+  await signInWithPopup(auth, provider);
+};
+
+onAuthStateChanged(auth, async (user)=>{
+  if(user){
+    uid = user.uid;
+
+    log("Logged in UID: " + uid);
+
+    if(!isAdmin()){
+      document.getElementById("status").innerText = "Access Denied";
+      log("❌ Not Admin");
+      return;
+    }
+
+    document.getElementById("status").innerText = "Admin: " + user.email;
+    log("✅ Admin Access Granted");
+
+    loadUsers();
+    loadAllData();
+  }
+});
+
+// 🔥 USER DROPDOWN LOAD
+async function loadUsers(){
+  const select = document.getElementById("user");
+  select.innerHTML = "";
+
+  try{
+    const snap = await get(child(ref(db),"users"));
+
+    if(!snap.exists()){
+      log("⚠ No users found");
+      return;
+    }
+
+    const data = snap.val();
+    log("Users Loaded: " + Object.keys(data).length);
+
+    Object.keys(data).forEach(u=>{
+
+    
+
+      const opt = document.createElement("option");
+      opt.value = u;
+      opt.textContent = u;
+      select.appendChild(opt);
+    });
+
+  }catch(e){
+    log("❌ Error loading users: " + e);
+  }
+}
+
+// 🔥 SAVE DATA
+window.saveData = async function(){
+  const user = document.getElementById("user").value;
+  const type = document.getElementById("type").value;
+  const key = document.getElementById("key").value;
+  const value = document.getElementById("value").value;
+  const expiryInput = document.getElementById("expiry").value;
+
+  if(!user || !key){
+    alert("User & Key required");
+    return;
+  }
+
+  let data = {
+    value:value,
+    time:Date.now()
+  };
+
+  if(type==="readOnlyData"){
+    const expiry = new Date(expiryInput).getTime();
+    if(!expiry){
+      alert("Select expiry");
+      return;
+    }
+    data.expiry = expiry;
+  }
+
+  try{
+    await set(ref(db,"users/"+user+"/"+type+"/"+key),data);
+    log("✅ Saved: "+user+"/"+type+"/"+key);
+
+    loadAllData();
+    loadUsers();
+
+  }catch(e){
+    log("❌ Save error: "+e);
+  }
+};
+
+// 🔥 REALTIME DATA VIEW
+function loadAllData(){
+  const usersRef = ref(db,"users");
+
+  onValue(usersRef,(snapshot)=>{
+    let html="";
+
+    if(!snapshot.exists()){
+      html="No Data";
+      document.getElementById("data").innerHTML = html;
+      return;
+    }
+
+    snapshot.forEach(userSnap=>{
+      const userId = userSnap.key;
+      const data = userSnap.val();
+
+      html += "<h3>"+userId+"</h3>";
+
+      ["privateData","readOnlyData","hiddenDataA","hiddenDataU"].forEach(type=>{
+
+        if(data[type]){
+          html += "<b>"+type+"</b><br>";
+
+          for(let k in data[type]){
+            const d = data[type][k];
+
+            let exp="";
+            if(d.expiry){
+              exp = " (exp: "+ new Date(d.expiry).toLocaleDateString() + ")";
+            }
+
+            html += k+" : "+d.value+exp+"<br>";
+          }
+        }
+
+      });
+
+      html += "<hr>";
+    });
+
+    document.getElementById("data").innerHTML = html;
+  });
+}
+
+// 🔥 RELOAD BUTTON
+window.reloadData = function(){
+  log("🔄 Reload clicked");
+  loadUsers();
+  loadAllData();
+};
+
+</script>
+
+<style>
+body{font-family:Arial;padding:20px}
+input,select,button{padding:8px;margin:5px}
+.box{border:1px solid #ccc;padding:10px;margin-top:10px}
+.debug{background:#000;color:#0f0;padding:10px;height:150px;overflow:auto;font-size:12px}
+</style>
+
+</head>
+
+<body>
+
+<h2>Admin Panel</h2>
+
+<button onclick="login()">Login</button>
+<p id="status">Not logged in</p>
+
+<hr>
+
+<h3>Write Data</h3>
+
+<select id="user"></select>
+
+<select id="type">
+<option value="privateData">privateData</option>
+<option value="readOnlyData">readOnlyData</option>
+<option value="hiddenDataA">hiddenDataA</option>
+<option value="hiddenDataU">hiddenDataU</option>
+</select>
+
+<input id="key" placeholder="Key">
+<input id="value" placeholder="Value">
+<input type="date" id="expiry">
+
+<button onclick="saveData()">Submit</button>
+<button onclick="reloadData()">Reload</button>
+
+<hr>
+
+<h3>All Users Data</h3>
+<div id="data" class="box"></div>
+
+<hr>
+
+<h3>Debug</h3>
+<div id="debug" class="debug"></div>
+
+</body>
+</html>

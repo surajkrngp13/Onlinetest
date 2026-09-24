@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Combined Admin Panel</title>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+// RTDB
+import { getDatabase, ref, set, get, child, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+// FIRESTORE
+import { getFirestore, doc, setDoc, getDocs, collection } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDbkK1inremaHQDtUrB-DX5CkvcAeihieY",
+  authDomain: "quizdb-9db17.firebaseapp.com",
+  projectId: "quizdb-9db17",
+  storageBucket: "quizdb-9db17.firebasestorage.app",
+  messagingSenderId: "1064062597943",
+  appId: "1:1064062597943:web:be4d3f136a370e5181f8b2"
+};
+
+const ADMIN_UIDS = [
+  "LuI6YGELl2VHf7ywbbyV93s1ilq1",
+  "SECOND_ADMIN_UID"
+];
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const rtdb = getDatabase(app);
+const fsdb = getFirestore(app);
+const provider = new GoogleAuthProvider();
+
+let uid=null;
+
+function log(msg){
+  console.log(msg);
+  document.getElementById("debug").innerHTML += msg+"<br>";
+}
+
+function isAdmin(){
+  return ADMIN_UIDS.includes(uid);
+}
+
+window.login = async ()=> await signInWithPopup(auth,provider);
+
+onAuthStateChanged(auth, async (user)=>{
+  if(user){
+    uid = user.uid;
+
+    if(!isAdmin()){
+      document.getElementById("status").innerText="Access Denied";
+      return;
+    }
+
+    document.getElementById("status").innerText="Admin: "+user.email;
+
+    loadUsers();
+    loadRTDB();
+    loadFirestore();
+  }
+});
+
+
+// 🔥 LOAD USERS FROM RTDB
+async function loadUsers(){
+  const select=document.getElementById("user");
+  select.innerHTML="";
+
+  const snap = await get(child(ref(rtdb),"users"));
+
+  if(!snap.exists()){
+    log("No users");
+    return;
+  }
+
+  Object.keys(snap.val()).forEach(u=>{
+    if(ADMIN_UIDS.includes(u)) return;
+
+    let opt=document.createElement("option");
+    opt.value=u;
+    opt.textContent=u;
+    select.appendChild(opt);
+  });
+}
+
+// 🔥 SAVE DATA
+window.saveData = async ()=>{
+  const user=document.getElementById("user").value;
+  const type=document.getElementById("type").value;
+  const key=document.getElementById("key").value;
+  const value=document.getElementById("value").value;
+  const dbType=document.getElementById("dbType").value;
+  const expiryInput=document.getElementById("expiry").value;
+
+  if(!user||!key) return alert("User & key required");
+
+  let data={ value:value, time:Date.now() };
+
+  if(type==="readOnlyData"){
+    const expiry=new Date(expiryInput).getTime();
+    data.expiry=expiry;
+  }
+
+  try{
+
+    if(dbType==="rtdb"){
+      await set(ref(rtdb,"users/"+user+"/"+type+"/"+key),data);
+      log("RTDB Saved");
+    }
+
+    if(dbType==="firestore"){
+      await setDoc(doc(fsdb,"users",user,type,key),data);
+      log("Firestore Saved");
+    }
+
+  }catch(e){
+    log("Error: "+e);
+  }
+};
+
+
+// 🔥 RTDB VIEW
+function loadRTDB(){
+  onValue(ref(rtdb,"users"),(snap)=>{
+    let html="<h3>RTDB</h3>";
+
+    snap.forEach(u=>{
+      html+="<b>"+u.key+"</b><br>";
+
+      const d=u.val();
+
+      ["privateData","readOnlyData","hiddenDataA","hiddenDataU"].forEach(t=>{
+        if(d[t]){
+          html+=t+"<br>";
+          for(let k in d[t]){
+            html+=k+" : "+d[t][k].value+"<br>";
+          }
+        }
+      });
+
+      html+="<hr>";
+    });
+
+    document.getElementById("rtdb").innerHTML=html;
+  });
+}
+
+
+// 🔥 FIRESTORE VIEW
+async function loadFirestore(){
+  let html="<h3>Firestore</h3>";
+
+  const users = await getDocs(collection(fsdb,"users"));
+
+  for(let u of users.docs){
+    html+="<b>"+u.id+"</b><br>";
+
+    const types=["privateData","readOnlyData","hiddenDataA","hiddenDataU"];
+
+    for(let t of types){
+      try{
+        const sub = await getDocs(collection(fsdb,"users",u.id,t));
+        sub.forEach(d=>{
+          html+=t+" → "+d.id+" : "+d.data().value+"<br>";
+        });
+      }catch{}
+    }
+
+    html+="<hr>";
+  }
+
+  document.getElementById("fs").innerHTML=html;
+}
+
+// 🔄 RELOAD
+window.reloadAll=()=>{
+  loadUsers();
+  loadRTDB();
+  loadFirestore();
+};
+</script>
+
+<style>
+body{font-family:Arial;padding:20px}
+input,select,button{padding:8px;margin:5px}
+.box{border:1px solid #ccc;padding:10px;margin-top:10px}
+.debug{background:#000;color:#0f0;height:120px;overflow:auto}
+</style>
+
+</head>
+
+<body>
+
+<h2>Combined Admin Panel</h2>
+
+<button onclick="login()">Login</button>
+<p id="status">Not logged</p>
+
+<hr>
+
+<h3>Write Data</h3>
+
+<select id="user"></select>
+
+<select id="dbType">
+<option value="rtdb">Realtime DB</option>
+<option value="firestore">Firestore</option>
+</select>
+
+<select id="type">
+<option value="privateData">privateData</option>
+<option value="readOnlyData">readOnlyData</option>
+<option value="hiddenDataA">hiddenDataA</option>
+<option value="hiddenDataU">hiddenDataU</option>
+</select>
+
+<input id="key" placeholder="Key">
+<input id="value" placeholder="Value">
+<input type="date" id="expiry">
+
+<button onclick="saveData()">Submit</button>
+<button onclick="reloadAll()">Reload</button>
+
+<hr>
+
+<div id="rtdb" class="box"></div>
+<div id="fs" class="box"></div>
+
+<hr>
+
+<div id="debug" class="debug"></div>
+
+</body>
+</html>

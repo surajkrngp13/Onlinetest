@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>RTDB Full User Panel</title>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
+from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+import { getDatabase, ref, get, set }
+from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+/* =========================
+   🔥 FIREBASE CONFIG
+========================= */
+const firebaseConfig = {
+  apiKey: "AIzaSyDbkK1inremaHQDtUrB-DX5CkvcAeihieY",
+  authDomain: "quizdb-9db17.firebaseapp.com",
+  projectId: "quizdb-9db17",
+  storageBucket: "quizdb-9db17.firebasestorage.app",
+  messagingSenderId: "1064062597943",
+  appId: "1:1064062597943:web:be4d3f136a370e5181f8b2"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getDatabase(app);
+const provider = new GoogleAuthProvider();
+
+/* =========================
+   🔑 LOGIN / LOGOUT
+========================= */
+window.login = () => signInWithPopup(auth, provider);
+window.logout = () => signOut(auth);
+
+/* =========================
+   👤 AUTH STATE
+========================= */
+onAuthStateChanged(auth, async (user) => {
+  if (user) {
+    document.getElementById("status").innerText = "Logged in: " + user.uid;
+
+    loadProfile(user.uid);
+    loadReadOnly(user.uid);
+
+  } else {
+    document.getElementById("status").innerText = "Not logged in";
+  }
+});
+
+/* =========================
+   ✍️ SAVE PROFILE
+========================= */
+window.saveProfile = async () => {
+  const user = auth.currentUser;
+  if (!user) return;
+
+  const name = document.getElementById("name").value;
+  const email = document.getElementById("email").value;
+
+  await set(ref(db, "users/" + user.uid + "/profile"), {
+    name,
+    email
+  });
+
+  loadProfile(user.uid);
+};
+
+/* =========================
+   🔒 SAVE hiddenDataU
+========================= */
+window.saveHidden = async () => {
+  const user = auth.currentUser;
+  if (!user) return;
+
+  const ip = document.getElementById("ip").value;
+  const device = document.getElementById("device").value;
+
+  await set(ref(db, "users/" + user.uid + "/hiddenDataU"), {
+    ip,
+    device,
+    time: Date.now()
+  });
+
+  alert("Hidden data saved");
+};
+
+/* =========================
+   👤 LOAD PROFILE (OUTPUT)
+========================= */
+async function loadProfile(uid) {
+  const snap = await get(ref(db, "users/" + uid + "/profile"));
+
+  if (snap.exists()) {
+    document.getElementById("profileOut").innerText =
+      JSON.stringify(snap.val(), null, 2);
+  }
+}
+
+/* =========================
+   📦 LOAD READ ONLY DATA (OUTPUT)
+========================= */
+async function loadReadOnly(uid) {
+  const snap = await get(ref(db, "users/" + uid + "/readOnlyData"));
+
+  let html = "";
+
+  if (snap.exists()) {
+    snap.forEach(child => {
+      const d = child.val();
+
+      html += `
+        <div style="border:1px solid #ccc; margin:10px; padding:10px;">
+          <p><b>Value:</b> ${d.value}</p>
+          <p><b>Status:</b> ${d.status}</p>
+          <p><b>Expiry:</b> ${d.expiry}</p>
+        </div>
+      `;
+    });
+  }
+
+  document.getElementById("readonlyOut").innerHTML = html;
+}
+
+</script>
+
+<style>
+body { font-family: Arial; padding: 20px; }
+input { margin: 5px; padding: 8px; }
+button { margin: 5px; padding: 10px; }
+.box { border: 1px solid #ddd; padding: 10px; margin: 10px 0; }
+</style>
+
+</head>
+
+<body>
+
+<h2>🔥 RTDB FULL USER PANEL</h2>
+
+<p id="status">Not logged in</p>
+
+<button onclick="login()">Login</button>
+<button onclick="logout()">Logout</button>
+
+<hr>
+
+<!-- ================= PROFILE INPUT ================= -->
+<div class="box">
+<h3>✍️ Profile Input</h3>
+<input id="name" placeholder="Name"><br>
+<input id="email" placeholder="Email"><br>
+<button onclick="saveProfile()">Save Profile</button>
+</div>
+
+<!-- ================= HIDDEN INPUT ================= -->
+<div class="box">
+<h3>🔒 Hidden Data Input</h3>
+<input id="ip" placeholder="IP Address"><br>
+<input id="device" placeholder="Device Info"><br>
+<button onclick="saveHidden()">Save Hidden Data</button>
+</div>
+
+<!-- ================= PROFILE OUTPUT ================= -->
+<div class="box">
+<h3>👤 Profile Output</h3>
+<pre id="profileOut"></pre>
+</div>
+
+<!-- ================= READ ONLY OUTPUT ================= -->
+<div class="box">
+<h3>📦 ReadOnly Data Output</h3>
+<div id="readonlyOut"></div>
+</div>
+
+</body>
+</html>

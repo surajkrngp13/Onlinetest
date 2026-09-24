@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Database Structure Admin</title>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDbkK1inremaHQDtUrB-DX5CkvcAeihieY",
+  authDomain: "quizdb-9db17.firebaseapp.com",
+  projectId: "quizdb-9db17",
+  storageBucket: "quizdb-9db17.firebasestorage.app",
+  messagingSenderId: "1064062597943",
+  appId: "1:1064062597943:web:be4d3f136a370e5181f8b2"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const rtdb = getDatabase(app);
+
+const provider = new GoogleAuthProvider();
+
+let uid = "";
+
+// 🔐 LOGIN
+window.login = async () => {
+  await signInWithPopup(auth, provider);
+};
+
+// 🔐 AUTH
+onAuthStateChanged(auth, (user) => {
+  if (!user) return;
+  uid = user.uid;
+  document.getElementById("adminUID").innerText = uid;
+});
+
+// ⚡ CREATE FULL STRUCTURE
+window.createStructure = async () => {
+  const targetUID = document.getElementById("targetUID").value;
+
+  if (!targetUID) return alert("Enter UID");
+
+  // ================= FIRESTORE =================
+
+  // users
+  await setDoc(doc(db, "users", targetUID), {
+    name: "",
+    email: "",
+    createdAt: Date.now()
+  });
+
+  // rtdbStatus
+  await setDoc(doc(db, "rtdbStatus", targetUID), {
+    status: "active",
+    session: true,
+    role: "user",
+    expiry: Date.now() + 86400000
+  });
+
+  // maindb branchA structure
+  await setDoc(doc(db, "maindb", "branchA"), {
+    accessMap: {
+      dataA: "userlistA",
+      dataB: "userlistB"
+    }
+  }, { merge: true });
+
+  await setDoc(doc(db, "maindb", "branchA", "userlistA", targetUID), {
+    uid: targetUID
+  });
+
+  await setDoc(doc(db, "maindb", "branchA", "userlistB", targetUID), {
+    uid: targetUID
+  });
+
+  await setDoc(doc(db, "maindb", "branchA", "dataA", "doc1"), {
+    sample: "dataA"
+  });
+
+  // admin
+  await setDoc(doc(db, "admin", "logs"), {
+    lastCreated: targetUID,
+    time: Date.now()
+  }, { merge: true });
+
+  // ================= RTDB =================
+
+  await set(ref(rtdb, "users/" + targetUID), {
+    status: "active",
+    session: true,
+    expiry: Date.now() + 86400000,
+    role: "user",
+    privateData: {
+      data1: "init",
+      data2: "init"
+    },
+    hiddenDataU: true
+  });
+
+  await set(ref(rtdb, "rtdbStatus/" + targetUID), {
+    status: "active",
+    session: true,
+    expiry: Date.now()
+  });
+
+  await set(ref(rtdb, "admin/" + targetUID), {
+    role: "user"
+  });
+
+  await set(ref(rtdb, "system/config"), {
+    maintenanceMode: false
+  });
+
+  alert("🔥 FULL STRUCTURE CREATED FOR " + targetUID);
+};
+
+</script>
+
+<style>
+body {
+  font-family: Arial;
+  background: #f3f3f3;
+  padding: 20px;
+}
+input, button {
+  padding: 10px;
+  margin: 5px;
+}
+pre {
+  background: black;
+  color: lime;
+  padding: 10px;
+}
+</style>
+
+</head>
+
+<body>
+
+<h2>👑 DATABASE STRUCTURE ADMIN BUILDER</h2>
+
+<button onclick="login()">Admin Login</button>
+
+<h3>Admin UID</h3>
+<div id="adminUID"></div>
+
+<hr>
+
+<h3>Create Full Structure</h3>
+
+<input id="targetUID" placeholder="Enter User UID">
+
+<br>
+
+<button onclick="createStructure()">🔥 Generate Full Firestore + RTDB Structure</button>
+
+<hr>
+
+<h3>Structure Info</h3>
+
+<pre>
+FIRESTORE
+- users/{uid}
+- rtdbStatus/{uid}
+- maindb/branchA/accessMap
+- userlistA / userlistB
+- dataA / dataB
+- admin/logs
+
+REALTIME DB
+- users/{uid}
+- rtdbStatus/{uid}
+- admin/{uid}
+- system/config
+</pre>
+
+</body>
+</html>

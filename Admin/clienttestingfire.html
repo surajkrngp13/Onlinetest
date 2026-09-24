@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Client App Advanced</title>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, doc, setDoc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDbkK1inremaHQDtUrB-DX5CkvcAeihieY",
+  authDomain: "quizdb-9db17.firebaseapp.com",
+  projectId: "quizdb-9db17",
+  storageBucket: "quizdb-9db17.firebasestorage.app",
+  messagingSenderId: "1064062597943",
+  appId: "1:1064062597943:web:be4d3f136a370e5181f8b2"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const provider = new GoogleAuthProvider();
+
+let uid = null;
+
+function isExpired(expiry){
+  if(!expiry) return false;
+  return Date.now() > expiry;
+}
+
+window.login = async function () {
+  const res = await signInWithPopup(auth, provider);
+  uid = res.user.uid;
+
+  document.getElementById("status").innerText =
+    "Logged In: " + res.user.email;
+
+  loadAllData();
+};
+
+// ---------------- SAVE MULTIPLE PRIVATE DOCS ----------------
+window.addDoc = function () {
+  const box = document.getElementById("docs");
+
+  const div = document.createElement("div");
+
+  div.innerHTML = `
+    <input placeholder="Document Name" class="docName">
+    <input placeholder="Value" class="docValue">
+    <button onclick="this.parentElement.remove()">Remove</button>
+    <hr>
+  `;
+
+  box.appendChild(div);
+};
+
+window.saveAll = async function () {
+  if (!uid) return;
+
+  const names = document.querySelectorAll(".docName");
+  const values = document.querySelectorAll(".docValue");
+
+  for (let i = 0; i < names.length; i++) {
+    const name = names[i].value;
+    const value = values[i].value;
+
+    if (!name) continue;
+
+    await setDoc(doc(db, "users", uid, "privateData", name), {
+      value: value,
+      updatedAt: Date.now()
+    });
+  }
+
+  loadAllData();
+};
+
+// ---------------- DIRECT FIELD SEARCH ----------------
+
+
+
+
+window.searchField = async function () {
+  if (!uid) return;
+
+  const field = document.getElementById("searchField").value;
+
+  let html = "<h3>🔎 Search Result</h3>";
+
+  // ---------------- PRIVATE DATA ----------------
+  const privateRef = doc(db, "users", uid, "privateData", field);
+  const privateSnap = await getDoc(privateRef);
+
+  html += "<h3>🔐 Private Data</h3>";
+
+  if (privateSnap.exists()) {
+    const data = privateSnap.data();
+
+    html += `
+      <div>
+        <b>Value:</b> ${data.value ?? "N/A"} <br>
+        <b>Updated At:</b> ${data.updatedAt ?? "N/A"}
+      </div>
+    `;
+  } else {
+    html += "Not Found";
+  }
+
+  // ---------------- READ ONLY DATA ----------------
+  const readRef = doc(db, "users", uid, "readOnlyData", field);
+  const readSnap = await getDoc(readRef);
+
+  html += "<h3>📖 Read Only Data</h3>";
+
+  if (readSnap.exists()) {
+    const data = readSnap.data();
+
+    const expired = data.expiry && Date.now() > data.expiry;
+
+    html += `
+      <div style="border:1px solid #ccc;padding:10px;margin:5px;">
+        <b>Value:</b> ${data.XX ?? "N/A"} <br>
+        <b>Expiry:</b> ${data.expiry ? new Date(data.expiry).toLocaleString() : "No expiry"} <br>
+        <b>Status:</b> ${expired ? "❌ EXPIRED" : "✅ ACTIVE"}
+      </div>
+    `;
+  } else {
+    html += "Not Found";
+  }
+
+  document.getElementById("output").innerHTML = html;
+};
+
+
+
+
+
+
+
+// ---------------- LOAD ALL DATA ----------------
+async function loadAllData() {
+  if (!uid) return;
+
+  let html = "";
+
+  const privateSnap = await getDocs(collection(db, "users", uid, "privateData"));
+
+  html += "<h3>🔐 Private Data</h3>";
+  privateSnap.forEach(d => {
+    html += "<pre>" + JSON.stringify(d.data(), null, 2) + "</pre>";
+  });
+
+  const readSnap = await getDocs(collection(db, "users", uid, "readOnlyData"));
+
+  html += "<h3>📖 Read Only Data</h3>";
+
+  readSnap.forEach(d => {
+    const data = d.data();
+    if (isExpired(data.expiry)) return;
+
+    html += "<pre>" + JSON.stringify(data, null, 2) + "</pre>";
+  });
+
+  document.getElementById("output").innerHTML = html;
+}
+
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    uid = user.uid;
+    document.getElementById("status").innerText =
+      "Logged In: " + user.email;
+
+    loadAllData();
+  }
+});
+</script>
+
+<style>
+body { font-family: Arial; padding: 20px; }
+input { padding: 8px; margin: 5px; width: 220px; }
+button { padding: 8px; margin: 5px; cursor:pointer; }
+pre { background:#f4f4f4; padding:10px; }
+</style>
+
+</head>
+
+<body>
+
+<h2>🔥 Client App Advanced</h2>
+
+<button onclick="login()">Login with Google</button>
+
+<p id="status">Not Logged In</p>
+
+<hr>
+
+<h3>➕ Private Data (Multiple Docs)</h3>
+
+<div id="docs"></div>
+
+<button onclick="addDoc()">Add Document</button>
+<button onclick="saveAll()">Save All</button>
+
+<hr>
+
+<h3>🔎 Direct Field Search</h3>
+
+<input id="searchField" placeholder="Enter field name (doc id)">
+<button onclick="searchField()">Search</button>
+
+<hr>
+
+<div id="output"></div>
+
+</body>
+</html>

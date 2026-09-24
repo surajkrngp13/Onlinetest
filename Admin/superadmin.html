@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Admin Panel FIXED</title>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, collection, getDocs, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getDatabase, ref, get, set } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDbkK1inremaHQDtUrB-DX5CkvcAeihieY",
+  authDomain: "quizdb-9db17.firebaseapp.com",
+  projectId: "quizdb-9db17",
+  storageBucket: "quizdb-9db17.firebasestorage.app",
+  messagingSenderId: "1064062597943",
+  appId: "1:1064062597943:web:be4d3f136a370e5181f8b2"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const rtdb = getDatabase(app);
+
+const provider = new GoogleAuthProvider();
+
+let selectedUID = "";
+
+// 🔐 LOGIN
+window.login = async () => {
+  await signInWithPopup(auth, provider);
+};
+
+// 🔐 AUTH CHECK
+onAuthStateChanged(auth, async (user) => {
+  if (!user) return;
+
+  document.getElementById("adminUID").innerText = user.uid;
+
+  loadUsers();
+});
+
+// 📥 LOAD USERS (FIXED)
+window.loadUsers = async () => {
+  const snap = await getDocs(collection(db, "users"));
+
+  let html = "<option value=''>Select User</option>";
+
+  snap.forEach(d => {
+    html += `<option value="${d.id}">${d.id}</option>`;
+  });
+
+  document.getElementById("userSelect").innerHTML = html;
+};
+
+// 👤 SELECT USER (FIXED)
+window.selectUser = async () => {
+  const uid = document.getElementById("userSelect").value;
+
+  if (!uid) return;
+
+  selectedUID = uid;
+
+  // Firestore
+  const fsDoc = await getDoc(doc(db, "rtdbStatus", uid));
+  document.getElementById("firestoreData").innerText =
+    JSON.stringify(fsDoc.exists() ? fsDoc.data() : {}, null, 2);
+
+  // RTDB
+  const rtSnap = await get(ref(rtdb, "users/" + uid));
+  document.getElementById("rtdbData").innerText =
+    JSON.stringify(rtSnap.val() || {}, null, 2);
+};
+
+// ✍️ FIRESTORE WRITE
+window.writeFirestore = async () => {
+  if (!selectedUID) return alert("Select User");
+
+  const key = document.getElementById("key").value;
+  const value = document.getElementById("value").value;
+
+  if (!key) return alert("Enter Key");
+
+  await setDoc(doc(db, "rtdbStatus", selectedUID), {
+    [key]: value,
+    updated: Date.now(),
+    uid: selectedUID
+  }, { merge: true });
+
+  alert("Firestore Updated");
+  selectUser();
+};
+
+// ✍️ RTDB WRITE
+window.writeRTDB = async () => {
+  if (!selectedUID) return alert("Select User");
+
+  const key = document.getElementById("key").value;
+  const value = document.getElementById("value").value;
+
+  if (!key) return alert("Enter Key");
+
+  await set(ref(rtdb, "users/" + selectedUID + "/" + key), {
+    value: value,
+    time: Date.now()
+  });
+
+  alert("RTDB Updated");
+  selectUser();
+};
+
+</script>
+
+<style>
+body {
+  font-family: Arial;
+  background: #f2f2f2;
+  padding: 20px;
+}
+button, select, input {
+  padding: 10px;
+  margin: 5px;
+}
+pre {
+  background: black;
+  color: lime;
+  padding: 10px;
+  height: 200px;
+  overflow: auto;
+}
+</style>
+
+</head>
+
+<body>
+
+<h2>👑 FULL ADMIN PANEL (FIXED)</h2>
+
+<button onclick="login()">Admin Login</button>
+
+<h3>Admin UID</h3>
+<div id="adminUID"></div>
+
+<hr>
+
+<h3>Select User</h3>
+<select id="userSelect" onchange="selectUser()">
+  <option value="">Loading...</option>
+</select>
+
+<hr>
+
+<h3>Firestore Data</h3>
+<pre id="firestoreData"></pre>
+
+<h3>RTDB Data</h3>
+<pre id="rtdbData"></pre>
+
+<hr>
+
+<h3>Write Data (Key + Value)</h3>
+<input id="key" placeholder="Key">
+<input id="value" placeholder="Value">
+
+<br>
+
+<button onclick="writeFirestore()">Write Firestore</button>
+<button onclick="writeRTDB()">Write RTDB</button>
+
+</body>
+</html>
