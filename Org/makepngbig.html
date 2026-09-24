@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>A Q Number Axis</title>
+<style>
+body{margin:0;background:#111;color:#fff;text-align:center;font-family:sans-serif}
+video{width:100%;max-height:200px}
+canvas{border:1px solid #555;touch-action:none;margin-top:10px}
+.controls{padding:10px}
+input{width:60px}
+</style>
+</head>
+<body>
+
+<video id="video" autoplay playsinline muted></video>
+
+<div class="controls">
+<button id="startBtn">Start Camera</button>
+<button id="captureBtn">Capture</button><br><br>
+
+Cols: <input type="number" id="colInput" value="3">
+Rows: <input type="number" id="rowInput" value="3">
+<button onclick="setGrid()">Change</button>
+<button onclick="processCells()">Process</button>
+</div>
+
+<canvas id="canvas"></canvas>
+<canvas id="plotCanvas"></canvas>
+
+<script>
+let video=document.getElementById("video")
+let canvas=document.getElementById("canvas")
+let ctx=canvas.getContext("2d")
+
+let cols=[],rows=[]
+let texts={}
+let drag=null
+
+document.getElementById("startBtn").onclick=async ()=>{
+let stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}})
+video.srcObject=stream
+await video.play()
+}
+
+document.getElementById("captureBtn").onclick=()=>{
+canvas.width=video.videoWidth||400
+canvas.height=video.videoHeight||300
+initGrid()
+draw()
+}
+
+function initGrid(){
+let c=+colInput.value
+let r=+rowInput.value
+cols=[];rows=[];texts={}
+
+let cw=canvas.width/(c+1)
+let rh=canvas.height/(r+1)
+
+for(let i=1;i<=c;i++)cols.push(i*cw)
+for(let i=1;i<=r;i++)rows.push(i*rh)
+}
+
+function setGrid(){initGrid();draw()}
+
+function draw(){
+ctx.clearRect(0,0,canvas.width,canvas.height)
+ctx.drawImage(video,0,0,canvas.width,canvas.height)
+
+ctx.setLineDash([5,5])
+ctx.strokeStyle="white"
+
+cols.forEach(x=>{
+ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,canvas.height);ctx.stroke()
+})
+rows.forEach(y=>{
+ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(canvas.width,y);ctx.stroke()
+})
+
+drawText()
+}
+
+function drawText(){
+ctx.fillStyle="yellow"
+ctx.textAlign="center"
+ctx.textBaseline="middle"
+ctx.font="16px sans-serif"
+
+let xs=[0,...cols,canvas.width]
+let ys=[0,...rows,canvas.height]
+
+for(let i=0;i<xs.length-1;i++){
+for(let j=0;j<ys.length-1;j++){
+let key=i+"-"+j
+if(texts[key]){
+let cx=(xs[i]+xs[i+1])/2
+let cy=(ys[j]+ys[j+1])/2
+ctx.fillText(texts[key],cx,cy)
+}
+}
+}
+}
+
+function getPos(e){
+if(e.touches){
+let r=canvas.getBoundingClientRect()
+return{x:e.touches[0].clientX-r.left,y:e.touches[0].clientY-r.top}
+}
+return{x:e.offsetX,y:e.offsetY}
+}
+
+function hitTest(x,y){
+for(let i=0;i<cols.length;i++){
+if(Math.abs(x-cols[i])<10)return{type:"col",i}
+}
+for(let i=0;i<rows.length;i++){
+if(Math.abs(y-rows[i])<10)return{type:"row",i}
+}
+return null
+}
+
+function getCell(x,y){
+let xs=[0,...cols,canvas.width]
+let ys=[0,...rows,canvas.height]
+
+for(let i=0;i<xs.length-1;i++){
+for(let j=0;j<ys.length-1;j++){
+if(x>xs[i]&&x<xs[i+1]&&y>ys[j]&&y<ys[j+1])return{i,j}
+}
+}
+return null
+}
+
+canvas.onclick=e=>{
+let p=getPos(e)
+let cell=getCell(p.x,p.y)
+if(cell){
+let key=cell.i+"-"+cell.j
+let val=prompt("Enter (a1, q2...)",texts[key]||"")
+if(val!==null){texts[key]=val;draw()}
+}
+}
+
+function processCells(){
+let xs=[0,...cols,canvas.width]
+let ys=[0,...rows,canvas.height]
+
+let data=[]
+let maxNum=0
+
+for(let i=0;i<xs.length-1;i++){
+for(let j=0;j<ys.length-1;j++){
+
+let key=i+"-"+j
+if(!texts[key])continue
+
+let label=texts[key].toLowerCase()
+let letter=label[0]
+let num=parseInt(label.slice(1))
+
+if((letter==="a"||letter==="q") && num){
+maxNum=Math.max(maxNum,num)
+
+let w=xs[i+1]-xs[i]
+let h=ys[j+1]-ys[j]
+
+let temp=document.createElement("canvas")
+temp.width=w
+temp.height=h
+let tctx=temp.getContext("2d")
+
+tctx.drawImage(canvas,xs[i],ys[j],w,h,0,0,w,h)
+
+let imgData=tctx.getImageData(0,0,w,h)
+let d=imgData.data
+
+for(let k=0;k<d.length;k+=4){
+let gray=(d[k]+d[k+1]+d[k+2])/3
+let bw=gray>128?255:0
+d[k]=d[k+1]=d[k+2]=bw
+}
+tctx.putImageData(imgData,0,0)
+
+data.push({letter,num,canvas:temp})
+}
+}
+}
+
+plotGraph(data,maxNum)
+}
+
+function plotGraph(data,maxNum){
+let plot=document.getElementById("plotCanvas")
+let pctx=plot.getContext("2d")
+
+let cellW=120
+let cellH=120
+
+plot.width=cellW*2+60
+plot.height=cellH*maxNum+60
+
+pctx.clearRect(0,0,plot.width,plot.height)
+
+// axis
+pctx.strokeStyle="white"
+pctx.beginPath()
+pctx.moveTo(40,20)
+pctx.lineTo(40,plot.height-20)
+pctx.lineTo(plot.width-20,plot.height-20)
+pctx.stroke()
+
+// labels
+pctx.fillStyle="white"
+pctx.textAlign="center"
+
+pctx.fillText("A",40+cellW/2,plot.height-5)
+pctx.fillText("Q",40+cellW+cellW/2,plot.height-5)
+
+pctx.textAlign="right"
+for(let i=1;i<=maxNum;i++){
+pctx.fillText(i,35,20+(i-1)*cellH+cellH/2)
+}
+
+// draw
+data.forEach(d=>{
+let colIndex=d.letter==="a"?0:1
+let rowIndex=d.num-1
+
+let img=new Image()
+img.src=d.canvas.toDataURL()
+img.onload=()=>{
+pctx.drawImage(img,
+40+colIndex*cellW,
+20+rowIndex*cellH,
+cellW,
+cellH)
+}
+})
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
+  <title>Excel Pro | Compression + Encryption Tools</title>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      background: #ffffff;
+      font-family: 'Segoe UI', 'Calibri', system-ui, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px 16px;
+    }
+    .toolbar-header {
+      background: #f8fafc;
+      border-radius: 28px;
+      padding: 12px 20px;
+      margin-bottom: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      border: 1px solid #e2edf2;
+      width: 100%;
+      max-width: 1400px;
+    }
+    .toolbar-btn {
+      background: #eef2f6;
+      border: none;
+      padding: 8px 18px;
+      border-radius: 40px;
+      font-weight: 600;
+      font-size: 13px;
+      color: #1e4620;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: monospace;
+    }
+    .toolbar-btn:hover { background: #e0e8f0; transform: translateY(-1px); }
+    .file-label {
+      background: #eef2f6;
+      padding: 8px 18px;
+      border-radius: 40px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #1e4620;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    input[type="file"] { display: none; }
+    
+    .dropdown-container { position: relative; display: inline-block; }
+    .dropdown-btn {
+      background: #eef2f6;
+      border: none;
+      padding: 6px 14px;
+      border-radius: 40px;
+      font-weight: 600;
+      font-size: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .dropdown-content {
+      display: none;
+      position: absolute;
+      top: 40px;
+      left: 0;
+      background: white;
+      min-width: 200px;
+      max-height: 260px;
+      overflow-y: auto;
+      border-radius: 16px;
+      box-shadow: 0 12px 28px rgba(0,0,0,0.15);
+      z-index: 100;
+      border: 1px solid #cbd5e1;
+    }
+    .dropdown-content.show { display: block; }
+    .dropdown-content div {
+      padding: 8px 14px;
+      cursor: pointer;
+      font-size: 12px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .dropdown-content div:hover { background: #e6f7e6; }
+    
+    .multi-input-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #e8f0e4;
+      padding: 6px 18px;
+      border-radius: 60px;
+      flex-wrap: wrap;
+    }
+    .input-item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: white;
+      padding: 2px 10px;
+      border-radius: 40px;
+      border: 1px solid #cbd5e1;
+    }
+    .input-item label {
+      font-size: 11px;
+      font-weight: 600;
+      color: #2e5a2c;
+    }
+    .sum-input {
+      background: #c8e6c9;
+      border: 1px solid #9ccc9c;
+      border-radius: 40px;
+      padding: 6px 14px;
+      font-size: 13px;
+      font-weight: 700;
+      width: 120px;
+      text-align: center;
+      outline: none;
+      color: #1b5e2a;
+    }
+    .addition-small-input {
+      width: 70px;
+      padding: 5px 8px;
+      border-radius: 30px;
+      border: 1px solid #cbd5e1;
+      text-align: center;
+      font-size: 11px;
+      outline: none;
+    }
+    .addition-small-input:focus { border-color: #2e7d5a; }
+    
+    .shortcut-hint {
+      background: #eef2f6;
+      padding: 5px 14px;
+      border-radius: 40px;
+      font-size: 10px;
+      color: #2c5e2a;
+      font-family: monospace;
+    }
+    .excel-board {
+      background: #fefef7;
+      border-radius: 24px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+      padding: 6px;
+      width: 100%;
+      max-width: 1400px;
+      height: 520px;
+      display: flex;
+      flex-direction: column;
+      border: 1px solid #d0e2c0;
+    }
+    .excel-header {
+      background: #eaf5e5;
+      border-radius: 18px 18px 0 0;
+      padding: 6px 18px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid #c8e0b8;
+    }
+    .excel-logo {
+      background: #cfe3c4;
+      padding: 3px 14px;
+      border-radius: 30px;
+      font-weight: bold;
+      font-size: 12px;
+      color: #1f5430;
+    }
+    .sheet-wrapper {
+      flex: 1;
+      overflow: auto;
+      background: #ffffff;
+      border-radius: 0 0 18px 18px;
+      -webkit-overflow-scrolling: touch;
+    }
+    .excel-table {
+      border-collapse: collapse;
+      font-size: 12px;
+      min-width: 100%;
+      width: max-content;
+      background: white;
+    }
+    .excel-table td, .excel-table th {
+      border: 1px solid #d4e2cc;
+      padding: 0;
+      height: 26px;
+      min-width: 75px;
+      width: 75px;
+      background: white;
+    }
+    .excel-table td {
+      cursor: cell;
+      padding: 3px 8px;
+      white-space: nowrap;
+      outline: none;
+      font-size: 12px;
+    }
+    .excel-table td:focus {
+      outline: none;
+      border: 2px solid #3c9e6d;
+      padding: 2px 7px;
+      background: #fefff2;
+    }
+    .excel-table th {
+      background: #e9f3e4;
+      font-weight: 700;
+      font-size: 11px;
+      color: #2a6230;
+      text-align: center;
+      padding: 4px 2px;
+      cursor: pointer;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .hidden-column { display: none !important; }
+    .row-header-green {
+      position: sticky;
+      left: 0;
+      background: #e9f3e4;
+      z-index: 9;
+      text-align: center;
+      min-width: 50px;
+      width: 50px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .extra-index-col {
+      position: sticky;
+      left: 50px;
+      background: #d4e8cc;
+      z-index: 8;
+      text-align: center;
+      min-width: 65px;
+      width: 65px;
+      background: #d4e8cc;
+      font-weight: 600;
+      color: #1a5c2e;
+      border-right: 1px solid #b8d4a8;
+      cursor: default;
+      font-size: 11px;
+    }
+    .excel-table th:first-child {
+      position: sticky;
+      left: 0;
+      top: 0;
+      z-index: 20;
+      background: #e0edda;
+      min-width: 50px;
+    }
+    .excel-table th:nth-child(2) {
+      position: sticky;
+      left: 50px;
+      z-index: 20;
+      background: #d4e8cc;
+      min-width: 65px;
+    }
+    .selected-cell {
+      outline: 2px solid #2c7a47;
+      outline-offset: -1px;
+      background-color: #fafff2;
+    }
+    .excel-footer {
+      background: #eaf5e5;
+      border-radius: 0 0 18px 18px;
+      padding: 5px 16px;
+      font-size: 10px;
+      color: #2e5a2c;
+      display: flex;
+      justify-content: space-between;
+    }
+    /* Compression & Encryption Panel */
+    .crypto-panel {
+      margin-top: 20px;
+      background: #f5f9f0;
+      border-radius: 28px;
+      padding: 16px 24px;
+      width: 100%;
+      max-width: 1400px;
+      border: 1px solid #cde0c0;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    .crypto-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    .progress-container {
+      flex: 1;
+      background: #e0e8dc;
+      border-radius: 40px;
+      height: 12px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      width: 0%;
+      height: 100%;
+      background: #3c9e6d;
+      transition: width 0.2s ease;
+    }
+    .password-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: white;
+      padding: 4px 16px;
+      border-radius: 40px;
+      border: 1px solid #cbd5e1;
+    }
+    .password-group input {
+      border: none;
+      padding: 6px 0;
+      width: 160px;
+      outline: none;
+      font-size: 12px;
+    }
+    .status-log {
+      background: #ffffffd9;
+      border-radius: 20px;
+      padding: 8px 16px;
+      font-size: 11px;
+      font-family: monospace;
+      max-height: 80px;
+      overflow-y: auto;
+      margin-top: 12px;
+    }
+    .status-log div {
+      padding: 2px 0;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .url-row {
+      margin-top: 12px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .url-input {
+      flex: 2;
+      min-width: 200px;
+      padding: 8px 14px;
+      border-radius: 40px;
+      border: 1px solid #cbd5e1;
+      font-size: 12px;
+      outline: none;
+    }
+    @media (max-width: 900px) {
+      .toolbar-header { gap: 8px; }
+      .multi-input-group { padding: 4px 12px; }
+      .addition-small-input { width: 55px; }
+      .excel-board { height: 460px; }
+      .crypto-panel { padding: 12px; }
+    }
+  </style>
+</head>
+<body>
+  <a href="/ReasoningQuestionTemplet.html">ReasoningQuestionTemplet.html</a>
+  <a href="makepngbig.html">makepngbig.html</a>
+<div>
+ <a href="/" style="font-size:22px;text-decoration:none">🏠</a>
+<div style="display:flex;justify-content:flex-end;padding:10px">
+<div onclick="h()" style="display:flex;flex-direction:column;align-items:center;font-family:Arial;cursor:pointer">
+<div style="width:50px;height:50px;background:#fff;border-radius:50%;display:flex;justify-content:center;align-items:center;overflow:hidden;box-shadow:0 2px 6px rgba(0,0,0,.2)">
+<span id="i" style="font-size:30px">👤</span>
+<img id="p" style="width:100%;height:100%;object-fit:cover;display:none">
+</div>
+<div id="n" style="margin-top:6px;font-size:13px">Guest</div>
+</div>
+</div>
+<script>
+let s=0,n=document.getElementById("n"),p=document.getElementById("p"),i=document.getElementById("i");
+function u(){try{let d=JSON.parse(sessionStorage.getItem("user"));if(d){s=1;n.innerText=d.name||"User";p.src=d.photo||"";p.style.display="block";i.style.display="none"}else{throw""}}catch(e){s=0;n.innerText="Guest";p.style.display="none";i.style.display="block"}}
+u();
+function h(){s?o():l()}
+function l(){try{let d=JSON.parse(sessionStorage.getItem("user"));d?u():(sessionStorage.setItem("redirectAfterLogin",location.href),location='/signinplease.html')}catch(e){location='/signinplease.html'}}
+function o(){sessionStorage.removeItem("user");u()}
+</script>
+
+
+</div>
+<div>
+
+
+
+</div>
+<div class="toolbar-header">
+  <span style="font-weight:700; color:#2b5e2f;">📊 EXCEL PRO</span>
+  <label class="file-label">📂 Upload (CSV/XLSX)<input type="file" id="uploadFileInput" accept=".csv, .xlsx, .xls, .txt, .json"></label>
+  <button class="toolbar-btn" id="loadBtn">🔄 Load & Apply</button>
+  <button class="toolbar-btn" id="resetBtn">♻️ Reset Sheet</button>
+  <div class="dropdown-container" id="filterDropdownContainer">
+    <button class="dropdown-btn" id="dropdownToggleBtn">📋 Filter Col A ▼</button>
+    <div class="dropdown-content" id="dropdownMenu"><div class="dropdown-header">✨ Unique values</div><div id="dropdownList"></div></div>
+  </div>
+  <div class="multi-input-group">
+    <span style="font-size:11px; font-weight:600;">➕ String Inputs:</span>
+    <div class="input-item"><label>1:</label><input type="text" id="input1" class="addition-small-input" value=""></div>
+    <div class="input-item"><label>2:</label><input type="text" id="input2" class="addition-small-input" value=""></div>
+    <div class="input-item"><label>3:</label><input type="text" id="input3" class="addition-small-input" value=""></div>
+    <div class="input-item"><label>4:</label><input type="text" id="input4" class="addition-small-input" value=""></div>
+    <div class="input-item"><label>5:</label><input type="text" id="input5" class="addition-small-input" value=""></div>
+    <span style="font-size:11px;">→</span>
+    <input type="text" id="concatResult" class="sum-input" readonly placeholder="String">
+    <button class="toolbar-btn" id="additionBtn" style="background:#c8e6c9;">Apply String to Col</button>
+    <button class="toolbar-btn" id="unhideColumnBtn" style="background:#ffe0b3;">🔓 Unhide Column ◈</button>
+  </div>
+  <button class="toolbar-btn" id="saveCsvBtn">💾 Save CSV (A→J)</button>
+  <div class="shortcut-hint">⌨️ Ctrl+Z/Y | ⬆⬇⬅➡</div>
+</div>
+
+<div class="excel-board">
+  <div class="excel-header"><div class="excel-logo">🍃 STRING ADDITION | Column ◈ hidden by default</div><div style="flex:1"></div><div style="font-size:10px;">✨ =SUM(A1:C2)</div></div>
+  <div class="sheet-wrapper"><table class="excel-table" id="greenSheet"><table></div>
+  <div class="excel-footer"><div id="msgBar">✅ Ready | Filter Col A → 5 inputs concatenate → Apply updates Extra Column ★</div><div>🔁 3x header expand</div></div>
+</div>
+
+<!-- COMPRESSION + ENCRYPTION PANEL (below excel) -->
+<div class="crypto-panel">
+  <div class="crypto-row">
+    <button class="toolbar-btn" id="btnCompressCSV" style="background:#cfe3c4;">🗜️ Compress CSV (Brotli)</button>
+    <div class="progress-container"><div class="progress-fill" id="compressProgress"></div></div>
+    <div class="password-group"><span>🔐 Password:</span><input type="text" id="encPassword" placeholder="leave empty = auto strong"></div>
+    <button class="toolbar-btn" id="btnEncryptOnly" style="background:#b8d4a8;">🔒 Encrypt (no download)</button>
+    <button class="toolbar-btn" id="btnDownloadEncrypted" style="background:#9ccc9c;" disabled>📥 Download .br.enc</button>
+  </div>
+  <!-- Editable URL path and upload button -->
+  <div class="url-row">
+    <input type="text" id="uploadUrlInput" class="url-input" placeholder="https://your-server.com/upload" value="https://httpbin.org/post">
+    <button class="toolbar-btn" id="btnUploadToUrl" style="background:#d4e8cc;" disabled>📤 Upload to URL</button>
+  </div>
+  <div class="status-log" id="cryptoLog">📦 Ready. Click 'Compress CSV' to start.</div>
+</div>
+
+<script type="module">
+    import brotliPromise from 'https://cdn.jsdelivr.net/npm/brotli-wasm@3.0.1/index.web.js';
+
+    // ========== SPREADSHEET ENGINE ==========
+    let rows = 360;
+    let cols = 11;
+    let isColumnHidden = true;
+    const tableElem = document.getElementById("greenSheet");
+    let cellStore = {};
+    let extraIndexStore = {};
+    let undoStack = [], redoStack = [];
+    let rowClickCount = 0, colClickCount = 0;
+    let activeFilterValue = null;
+    let originalRowsCount = 320;
+    let filteredRowMap = [];
+    
+    window.currentCellStore = cellStore;
+    window.currentOriginalRowsCount = originalRowsCount;
+    window.currentCols = cols;
+    
+    window.getCurrentSheetCSVBlob = function() {
+        const rowsCount = originalRowsCount;
+        const store = cellStore;
+        const csvRows = [];
+        for (let r = 0; r < rowsCount; r++) {
+            const rowCells = [];
+            for (let c = 0; c <= 10; c++) {
+                let val = store[`${r}_${c}`];
+                if (val === undefined) val = '';
+                let escaped = val.toString().includes(',') || val.toString().includes('"') ? `"${val.toString().replace(/"/g, '""')}"` : val;
+                rowCells.push(escaped);
+            }
+            csvRows.push(rowCells.join(','));
+        }
+        return new Blob([csvRows.join('\n')], { type: 'text/csv' });
+    };
+    
+    function saveState() { undoStack.push(JSON.stringify({ cellStore, extraIndexStore })); redoStack = []; if (undoStack.length > 80) undoStack.shift(); }
+    function undo() { if (undoStack.length) { redoStack.push(JSON.stringify({ cellStore, extraIndexStore })); let restored = JSON.parse(undoStack.pop()); cellStore = restored.cellStore; extraIndexStore = restored.extraIndexStore; applyFilterAndRender(); showMsg("↩️ Undo", 900); } else showMsg("⛔ Nothing to undo", 700); }
+    function redo() { if (redoStack.length) { undoStack.push(JSON.stringify({ cellStore, extraIndexStore })); let restored = JSON.parse(redoStack.pop()); cellStore = restored.cellStore; extraIndexStore = restored.extraIndexStore; applyFilterAndRender(); showMsg("↪️ Redo", 900); } else showMsg("⛔ Nothing to redo", 700); }
+    function showMsg(text, duration) { const msgDiv = document.getElementById("msgBar"); if (msgDiv) { let orig = msgDiv.innerText; msgDiv.innerText = text; setTimeout(() => { if (msgDiv) msgDiv.innerText = orig; }, duration); } }
+    function colLetter(n) { if (n === 0) return "A"; if (n === 1) return "◈"; let idx = n - 1; let s = ""; while (idx >= 0) { s = String.fromCharCode(idx % 26 + 65) + s; idx = Math.floor(idx / 26) - 1; } return s; }
+    function evaluateFormula(expr, dataMap) { try { let replaced = expr.replace(/[A-Z]+[0-9]+/gi, (ref) => { let colPart = ref.match(/[A-Z]+/i)[0].toUpperCase(); let rowNum = parseInt(ref.match(/[0-9]+/)[0], 10); let colIdx = 0; for (let i = 0; i < colPart.length; i++) colIdx = colIdx * 26 + (colPart.charCodeAt(i) - 64); colIdx--; let actualColIdx = (colIdx === 0) ? 0 : colIdx + 1; let rowIdx = rowNum - 1; let val = dataMap[`${rowIdx}_${actualColIdx}`]; if (val === undefined || val === "") return 0; let num = parseFloat(val); return isNaN(num) ? 0 : num; }); let result = Function(`"use strict"; return (${replaced})`)(); if (typeof result === 'number' && !isNaN(result) && isFinite(result)) return result.toString(); return "#VALUE!"; } catch (err) { return "#ERROR"; } }
+    function getCellElement(r, c) { return document.querySelector(`.excel-table td[data-row='${r}'][data-col='${c}']`); }
+    function clearSelection() { document.querySelectorAll(".selected-cell").forEach(cell => cell.classList.remove("selected-cell")); }
+    function getUniqueFirstColumnValues() { let uniqueSet = new Set(); for (let r = 0; r < originalRowsCount; r++) { let val = cellStore[`${r}_0`]; if (val && val.toString().trim() !== "") uniqueSet.add(val.toString().trim()); } return Array.from(uniqueSet).sort(); }
+    function updateDropdownMenu() { const dropdownList = document.getElementById("dropdownList"); if (!dropdownList) return; let uniques = getUniqueFirstColumnValues(); dropdownList.innerHTML = ''; let allDiv = document.createElement("div"); allDiv.innerText = "✅ Show All (clear filter)"; allDiv.style.fontWeight = "bold"; allDiv.style.background = "#f0f7ea"; allDiv.onclick = () => { activeFilterValue = null; applyFilterAndRender(); showMsg("Filter cleared", 1000); document.getElementById("dropdownMenu").classList.remove("show"); }; dropdownList.appendChild(allDiv); uniques.forEach(val => { let item = document.createElement("div"); item.innerText = val; item.onclick = () => { activeFilterValue = val; applyFilterAndRender(); showMsg(`🔍 Filter: ${val}`, 1200); document.getElementById("dropdownMenu").classList.remove("show"); }; dropdownList.appendChild(item); }); }
+    
+    function applyStringAddition() { const concatString = document.getElementById("concatResult").value; if (concatString === "") { showMsg("⚠️ Enter text in inputs", 1200); return; } saveState(); let targetRows = []; if (activeFilterValue !== null) { for (let i = 0; i < filteredRowMap.length; i++) { let actualRow = filteredRowMap[i]; let colAValue = cellStore[`${actualRow}_0`]; if (colAValue && colAValue.toString().trim() === activeFilterValue) targetRows.push(actualRow); } } else { for (let r = 0; r < originalRowsCount; r++) { if (cellStore[`${r}_0`]) targetRows.push(r); } if (targetRows.length === 0) for (let r = 0; r < Math.min(50, originalRowsCount); r++) targetRows.push(r); } if (targetRows.length === 0) { showMsg("No rows", 1000); return; } for (let row of targetRows) { let colAValue = cellStore[`${row}_0`] || ""; let newVal = colAValue + concatString; cellStore[`${row}_1`] = newVal; extraIndexStore[`${row}`] = newVal; } applyFilterAndRender(); showMsg(`✨ Added "${concatString}" to ${targetRows.length} rows`, 2000); }
+    
+    function toggleColumnVisibility() { isColumnHidden = !isColumnHidden; applyFilterAndRender(); showMsg(isColumnHidden ? "Column ◈ hidden" : "Column ◈ visible", 1500); document.getElementById("unhideColumnBtn").innerHTML = isColumnHidden ? "🔓 Unhide Column ◈" : "🔒 Hide Column ◈"; }
+    
+    function applyFilterAndRender() { if (activeFilterValue === null) { filteredRowMap = []; for (let i = 0; i < originalRowsCount; i++) filteredRowMap.push(i); rows = filteredRowMap.length; renderSheetWithFilter(); } else { let filtered = []; for (let i = 0; i < originalRowsCount; i++) { if (cellStore[`${i}_0`] && cellStore[`${i}_0`].toString().trim() === activeFilterValue) filtered.push(i); } filteredRowMap = filtered; rows = filteredRowMap.length; renderSheetWithFilter(); } updateDropdownMenu(); }
+    
+    function renderSheetWithFilter() { tableElem.innerHTML = ""; let headerTr = document.createElement("tr"); let corner = document.createElement("th"); corner.innerText = ""; headerTr.appendChild(corner); let extraHeader = document.createElement("th"); extraHeader.innerText = "★ EXTRA"; extraHeader.style.background = "#d4e8cc"; extraHeader.style.minWidth = "65px"; extraHeader.style.position = "sticky"; extraHeader.style.left = "50px"; headerTr.appendChild(extraHeader); for (let c = 0; c < cols; c++) { let th = document.createElement("th"); th.innerText = colLetter(c); if (c === 1) th.style.background = "#c8e0bc"; th.onclick = (e) => { e.stopPropagation(); colClickCount++; if (colClickCount === 3) { cols += 5; colClickCount = 0; applyFilterAndRender(); showMsg("✅ +5 columns", 1000); } else { let left = 3 - colClickCount; showMsg(`🔁 ${left} more → +5 cols`, 800); setTimeout(() => { if (colClickCount !== 3) colClickCount = 0; }, 1200); } }; headerTr.appendChild(th); } tableElem.appendChild(headerTr); for (let displayIdx = 0; displayIdx < rows; displayIdx++) { let actualRow = filteredRowMap[displayIdx]; let tr = document.createElement("tr"); let rowHead = document.createElement("th"); rowHead.innerText = actualRow + 1; rowHead.className = "row-header-green"; rowHead.onclick = (e) => { e.stopPropagation(); rowClickCount++; if (rowClickCount === 3) { originalRowsCount += 200; syncOriginalRows(); applyFilterAndRender(); rowClickCount = 0; showMsg("📈 +200 rows", 1000); } else { let left = 3 - rowClickCount; showMsg(`🔽 ${left} more → +200 rows`, 800); setTimeout(() => { if (rowClickCount !== 3) rowClickCount = 0; }, 1200); } }; tr.appendChild(rowHead); let extraVal = extraIndexStore[`${actualRow}`]; let extraIdxCell = document.createElement("th"); extraIdxCell.innerText = (extraVal !== undefined && extraVal !== null && extraVal !== "") ? extraVal : ""; extraIdxCell.className = "extra-index-col"; tr.appendChild(extraIdxCell); for (let c = 0; c < cols; c++) { let td = document.createElement("td"); td.contentEditable = "true"; td.setAttribute("data-row", actualRow); td.setAttribute("data-col", c); let key = `${actualRow}_${c}`; td.innerText = (cellStore[key] !== undefined) ? cellStore[key] : ""; if (c === 1) td.style.backgroundColor = "#f4fce8"; td.onfocus = () => { clearSelection(); td.classList.add("selected-cell"); }; td.onblur = () => { let raw = td.innerText.trim(); let realKey = `${actualRow}_${c}`; if (raw.startsWith("=")) { let computed = evaluateFormula(raw.substring(1), cellStore); cellStore[realKey] = computed; td.innerText = computed; } else { if (cellStore[realKey] !== raw) { saveState(); cellStore[realKey] = raw; } td.innerText = raw; } if (c === 0) { updateDropdownMenu(); if (activeFilterValue !== null) applyFilterAndRender(); } }; tr.appendChild(td); } tableElem.appendChild(tr); } if (isColumnHidden) { document.querySelectorAll(".excel-table th:nth-child(4), .excel-table td:nth-child(4)").forEach(el => el.classList.add("hidden-column")); } else { document.querySelectorAll(".hidden-column").forEach(el => el.classList.remove("hidden-column")); } document.querySelectorAll(".excel-table td").forEach(td => { let rr = parseInt(td.getAttribute("data-row")); let cc = parseInt(td.getAttribute("data-col")); if (!isNaN(rr) && !isNaN(cc)) { td.setAttribute("data-row", rr); td.setAttribute("data-col", cc); } }); window.currentCellStore = cellStore; window.currentOriginalRowsCount = originalRowsCount; window.currentCols = cols; }
+    
+    function syncOriginalRows() { for (let r = originalRowsCount - 200; r < originalRowsCount; r++) { for (let c = 0; c < cols; c++) { if (cellStore[`${r}_${c}`] === undefined) cellStore[`${r}_${c}`] = ""; } if (extraIndexStore[`${r}`] === undefined) extraIndexStore[`${r}`] = ""; } if (activeFilterValue === null) { filteredRowMap = []; for (let i = 0; i < originalRowsCount; i++) filteredRowMap.push(i); rows = filteredRowMap.length; } else { applyFilterAndRender(); } }
+    function fullRender() { if (!filteredRowMap.length || activeFilterValue === null) { filteredRowMap = []; for (let i = 0; i < originalRowsCount; i++) filteredRowMap.push(i); rows = filteredRowMap.length; } renderSheetWithFilter(); updateDropdownMenu(); }
+    function resetSheet() { saveState(); cellStore = {}; extraIndexStore = {}; originalRowsCount = 320; cols = 11; for (let i = 0; i < originalRowsCount; i++) { for (let j = 0; j < cols; j++) cellStore[`${i}_${j}`] = ""; extraIndexStore[`${i}`] = ""; } activeFilterValue = null; filteredRowMap = []; for (let i = 0; i < originalRowsCount; i++) filteredRowMap.push(i); rows = filteredRowMap.length; renderSheetWithFilter(); updateDropdownMenu(); showMsg("♻️ Sheet reset", 1200); }
+    function parseAndLoadData(content, fileType = 'csv') { let rowsData = []; if (fileType === 'csv') { const lines = content.split(/\r?\n/); for (let line of lines) { if (line.trim() === "") continue; let cells = line.split(/[,\t]/).map(cell => cell.replace(/^"|"$/g, '')); rowsData.push(cells); } } else { rowsData = content; } if (rowsData.length === 0) return; let newStore = {}; let newExtraStore = {}; let maxCols = 0; for (let i = 0; i < rowsData.length; i++) { let rowCells = rowsData[i]; if (rowCells.length > maxCols) maxCols = rowCells.length; for (let j = 0; j < rowCells.length; j++) { let targetCol = (j === 0) ? 0 : j + 1; let val = (rowCells[j] !== undefined && rowCells[j] !== null) ? rowCells[j].toString() : ""; newStore[`${i}_${targetCol}`] = val; } newStore[`${i}_1`] = ""; newExtraStore[`${i}`] = ""; } originalRowsCount = Math.max(rowsData.length, 20); cols = Math.max(maxCols + 1, 11); cellStore = newStore; extraIndexStore = newExtraStore; for (let i = 0; i < originalRowsCount; i++) { for (let j = 0; j < cols; j++) if (cellStore[`${i}_${j}`] === undefined) cellStore[`${i}_${j}`] = ""; if (extraIndexStore[`${i}`] === undefined) extraIndexStore[`${i}`] = ""; } activeFilterValue = null; syncOriginalRows(); fullRender(); showMsg(`✅ Loaded ${rowsData.length} rows`, 2000); }
+    
+    let uploadedBuffer = null; const fileInput = document.getElementById("uploadFileInput"); const loadBtn = document.getElementById("loadBtn"); const resetBtn = document.getElementById("resetBtn"); const saveBtn = document.getElementById("saveCsvBtn"); const additionBtn = document.getElementById("additionBtn"); const unhideBtn = document.getElementById("unhideColumnBtn"); const concatInputs = [input1, input2, input3, input4, input5]; const concatResultSpan = document.getElementById("concatResult"); function updateConcat() { let res = ""; for (let inp of concatInputs) res += inp.value; concatResultSpan.value = res; } concatInputs.forEach(inp => inp.addEventListener("input", updateConcat)); updateConcat(); additionBtn.onclick = applyStringAddition; unhideBtn.onclick = toggleColumnVisibility; fileInput.onchange = (e) => { const file = e.target.files[0]; if (!file) return; const ext = file.name.split('.').pop().toLowerCase(); const reader = new FileReader(); reader.onload = (ev) => { if (ext === 'xlsx' || ext === 'xls') { const data = new Uint8Array(ev.target.result); const workbook = XLSX.read(data, { type: 'array' }); const firstSheet = workbook.Sheets[workbook.SheetNames[0]]; const json = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: "" }); uploadedBuffer = json; showMsg(`📁 Excel loaded: ${file.name}`, 1500); } else { uploadedBuffer = ev.target.result; showMsg(`📁 File ready: ${file.name}`, 1500); } }; if (ext === 'xlsx' || ext === 'xls') reader.readAsArrayBuffer(file); else reader.readAsText(file, "UTF-8"); }; loadBtn.onclick = () => { if (uploadedBuffer) { if (typeof uploadedBuffer === 'string') parseAndLoadData(uploadedBuffer, 'csv'); else parseAndLoadData(uploadedBuffer, 'excel'); uploadedBuffer = null; fileInput.value = ""; } else showMsg("⚠️ Upload a file first", 1200); }; resetBtn.onclick = resetSheet; saveBtn.onclick = () => { const csvBlob = window.getCurrentSheetCSVBlob(); const link = document.createElement('a'); link.href = URL.createObjectURL(csvBlob); link.download = `sheet_${Date.now()}.csv`; link.click(); URL.revokeObjectURL(link.href); showMsg("💾 CSV saved (A→J columns)", 1500); };
+    document.addEventListener("keydown", (e) => { let active = document.activeElement; if (!active || active.tagName !== "TD") return; let row = parseInt(active.getAttribute("data-row")); let col = parseInt(active.getAttribute("data-col")); if (isNaN(row) || isNaN(col)) return; if (e.ctrlKey && e.key === 'z') { e.preventDefault(); undo(); return; } if (e.ctrlKey && e.key === 'y') { e.preventDefault(); redo(); return; } if (e.key === "ArrowDown") { e.preventDefault(); let next = getCellElement(row + 1, col); if (next) next.focus(); else if (row + 1 >= originalRowsCount) { originalRowsCount += 50; syncOriginalRows(); fullRender(); let newCell = getCellElement(row + 1, col); if (newCell) newCell.focus(); showMsg("Auto expand", 700); } } else if (e.key === "ArrowUp") { e.preventDefault(); getCellElement(row - 1, col)?.focus(); } else if (e.key === "ArrowRight") { e.preventDefault(); let right = getCellElement(row, col + 1); if (right) right.focus(); else if (col + 1 >= cols) { cols += 5; fullRender(); let rc = getCellElement(row, col + 1); if (rc) rc.focus(); showMsg("+5 cols", 700); } } else if (e.key === "ArrowLeft") { e.preventDefault(); getCellElement(row, col - 1)?.focus(); } else if (e.key === "Enter") { e.preventDefault(); let below = getCellElement(row + 1, col); if (below) below.focus(); else { originalRowsCount += 50; syncOriginalRows(); fullRender(); let nb = getCellElement(row + 1, col); if (nb) nb.focus(); showMsg("Row added", 700); } } else if (e.key === "Tab") { e.preventDefault(); let right = getCellElement(row, col + 1); if (right) right.focus(); else { cols += 5; fullRender(); let rc = getCellElement(row, col + 1); if (rc) rc.focus(); showMsg("Tab expand", 600); } } });
+    document.addEventListener("copy", (e) => { let act = document.activeElement; if (act && act.tagName === "TD") { e.clipboardData.setData("text/plain", act.innerText); e.preventDefault(); showMsg("Copied", 600); } });
+    document.addEventListener("paste", (e) => { e.preventDefault(); let act = document.activeElement; if (!act || act.tagName !== "TD") return; let raw = e.clipboardData.getData("text/plain"); let row = parseInt(act.getAttribute("data-row")); let col = parseInt(act.getAttribute("data-col")); if (isNaN(row) || isNaN(col)) return; saveState(); let lines = raw.split(/\r?\n/); for (let i = 0; i < lines.length; i++) { let cells = lines[i].split("\t"); for (let j = 0; j < cells.length; j++) { let tr = row + i, tc = col + j; if (tr >= originalRowsCount) originalRowsCount = tr + 100; if (tc >= cols) cols = tc + 5; cellStore[`${tr}_${tc}`] = cells[j]; } } syncOriginalRows(); fullRender(); let focusCell = getCellElement(row, col); if (focusCell) focusCell.focus(); showMsg("Pasted", 1000); });
+    const dropdownBtn = document.getElementById("dropdownToggleBtn"); const dropdownMenuDiv = document.getElementById("dropdownMenu");
+    dropdownBtn.addEventListener("click", (e) => { e.stopPropagation(); dropdownMenuDiv.classList.toggle("show"); updateDropdownMenu(); });
+    window.addEventListener("click", (e) => { if (!dropdownBtn.contains(e.target) && !dropdownMenuDiv.contains(e.target)) dropdownMenuDiv.classList.remove("show"); });
+    originalRowsCount = 320; cols = 11;
+    for (let i = 0; i < originalRowsCount; i++) { for (let j = 0; j < cols; j++) cellStore[`${i}_${j}`] = ""; extraIndexStore[`${i}`] = ""; }
+    syncOriginalRows(); fullRender();
+    window.currentCellStore = cellStore; window.currentOriginalRowsCount = originalRowsCount; window.currentCols = cols;
+    
+    // ========== BROTLI + ENCRYPTION ==========
+    let brotli = null;
+    let compressedBuffer = null;
+    let originalCSVBlob = null;
+    let encryptedBlobReady = null;
+    let lastUsedPassword = '';
+    let lastFileName = '';
+    
+    const compressProgress = document.getElementById('compressProgress');
+    const btnCompress = document.getElementById('btnCompressCSV');
+    const btnEncryptOnly = document.getElementById('btnEncryptOnly');
+    const btnDownload = document.getElementById('btnDownloadEncrypted');
+    const btnUpload = document.getElementById('btnUploadToUrl');
+    const encPasswordInput = document.getElementById('encPassword');
+    const uploadUrlInput = document.getElementById('uploadUrlInput');
+    const cryptoLogDiv = document.getElementById('cryptoLog');
+    
+    function logCrypto(msg, isErr = false) {
+        const div = document.createElement('div');
+        div.innerHTML = `${isErr ? '❌' : '✅'} [${new Date().toLocaleTimeString()}] ${msg}`;
+        cryptoLogDiv.appendChild(div);
+        cryptoLogDiv.scrollTop = cryptoLogDiv.scrollHeight;
+        if (cryptoLogDiv.children.length > 20) cryptoLogDiv.removeChild(cryptoLogDiv.children[0]);
+    }
+    
+    // Load brotli WASM after logCrypto defined
+    (async () => {
+        try {
+            brotli = await brotliPromise;
+            logCrypto('✅ Brotli WASM loaded (async, ready)');
+        } catch (err) {
+            logCrypto(`❌ Brotli load failed: ${err.message}`, true);
+        }
+    })();
+    
+    function generateStrongPassword() {
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%^&*';
+        let pwd = '';
+        for (let i = 0; i < 16; i++) pwd += chars[Math.floor(Math.random() * chars.length)];
+        return pwd;
+    }
+    
+    async function compressBlobChunks(blob, progressCallback) {
+        if (!brotli) throw new Error('Brotli not loaded');
+        const CHUNK = 1024 * 1024;
+        let offset = 0;
+        const compressedChunks = [];
+        const fileSize = blob.size;
+        while (offset < fileSize) {
+            const chunk = blob.slice(offset, Math.min(offset + CHUNK, fileSize));
+            const arrayBuf = await chunk.arrayBuffer();
+            const compressed = brotli.compress(new Uint8Array(arrayBuf), { quality: 11, lgwin: 24 });
+            const lenPrefix = new Uint8Array(4);
+            new DataView(lenPrefix.buffer).setUint32(0, compressed.length, true);
+            const combined = new Uint8Array(lenPrefix.length + compressed.length);
+            combined.set(lenPrefix, 0);
+            combined.set(compressed, lenPrefix.length);
+            compressedChunks.push(combined);
+            offset += CHUNK;
+            if (progressCallback) progressCallback((offset / fileSize) * 100);
+            await new Promise(r => setTimeout(r, 5));
+        }
+        const totalLen = compressedChunks.reduce((sum, c) => sum + c.length, 0);
+        const totalCompressed = new Uint8Array(totalLen);
+        let pos = 0;
+        for (const c of compressedChunks) { totalCompressed.set(c, pos); pos += c.length; }
+        return totalCompressed;
+    }
+    
+    async function deriveKey(password, salt) {
+        const enc = new TextEncoder();
+        const keyMat = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveKey']);
+        return crypto.subtle.deriveKey(
+            { name: 'PBKDF2', salt, iterations: 250000, hash: 'SHA-256' },
+            keyMat,
+            { name: 'AES-GCM', length: 256 },
+            false,
+            ['encrypt', 'decrypt']
+        );
+    }
+    
+    async function encryptWithMetadata(data, password, metadata) {
+        const salt = crypto.getRandomValues(new Uint8Array(16));
+        const iv = crypto.getRandomValues(new Uint8Array(12));
+        const key = await deriveKey(password, salt);
+        const metaStr = JSON.stringify(metadata);
+        const metaBytes = new TextEncoder().encode(metaStr);
+        const metaLen = new Uint8Array(2);
+        new DataView(metaLen.buffer).setUint16(0, metaBytes.length, true);
+        const magic = new TextEncoder().encode('BRESv1');
+        const encrypted = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, data);
+        const encryptedArr = new Uint8Array(encrypted);
+        const totalSize = magic.length + 2 + metaBytes.length + salt.length + iv.length + encryptedArr.length;
+        const final = new Uint8Array(totalSize);
+        let pos = 0;
+        final.set(magic, pos); pos += magic.length;
+        final.set(metaLen, pos); pos += 2;
+        final.set(metaBytes, pos); pos += metaBytes.length;
+        final.set(salt, pos); pos += salt.length;
+        final.set(iv, pos); pos += iv.length;
+        final.set(encryptedArr, pos);
+        return new Blob([final], { type: 'application/octet-stream' });
+    }
+    
+    btnCompress.onclick = async () => {
+        if (!brotli) { logCrypto('⏳ Brotli loading, wait...', true); return; }
+        logCrypto('📄 Generating CSV from current sheet...');
+        try {
+            const csvBlob = window.getCurrentSheetCSVBlob();
+            originalCSVBlob = csvBlob;
+            logCrypto(`CSV size: ${(csvBlob.size/1024).toFixed(2)} KB`);
+            compressProgress.style.width = '0%';
+            logCrypto('🗜️ Compressing with Brotli...');
+            const compressed = await compressBlobChunks(csvBlob, pct => { compressProgress.style.width = Math.min(100, pct) + '%'; });
+            compressedBuffer = compressed;
+            compressProgress.style.width = '100%';
+            const ratio = ((1 - compressed.length / csvBlob.size) * 100).toFixed(2);
+            logCrypto(`✅ Compression done: ${(compressed.length/1024).toFixed(2)} KB (saved ${ratio}%)`);
+            logCrypto('🔐 Now click "Encrypt" to prepare download.');
+            btnEncryptOnly.disabled = false;
+            btnDownload.disabled = true;
+            btnUpload.disabled = true;
+            encryptedBlobReady = null;
+        } catch (err) { logCrypto(`Compression error: ${err.message}`, true); compressProgress.style.width = '0%'; }
+    };
+    
+    btnEncryptOnly.onclick = async () => {
+        if (!compressedBuffer) { logCrypto('⚠️ No compressed data. Click "Compress CSV" first.', true); return; }
+        let password = encPasswordInput.value.trim();
+        let autoGenerated = false;
+        if (!password) {
+            password = generateStrongPassword();
+            autoGenerated = true;
+            encPasswordInput.value = password;
+        }
+        try {
+            logCrypto('🔒 Encrypting...');
+            const metadata = {
+                name: `spreadsheet_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.csv`,
+                mime: 'text/csv',
+                timestamp: Date.now(),
+                originalSize: originalCSVBlob ? originalCSVBlob.size : 0
+            };
+            const encrypted = await encryptWithMetadata(compressedBuffer, password, metadata);
+            encryptedBlobReady = encrypted;
+            lastUsedPassword = password;
+            lastFileName = `sheet_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.br.enc`;
+            logCrypto(`✅ Encrypted ready. File: ${lastFileName}`);
+            logCrypto(`🔑 Password: ${password} ${autoGenerated ? '(auto-generated)' : ''}`);
+            btnDownload.disabled = false;
+            btnUpload.disabled = false;
+        } catch (err) { logCrypto(`Encryption error: ${err.message}`, true); }
+    };
+    
+    btnDownload.onclick = () => {
+        if (!encryptedBlobReady) { logCrypto('⚠️ No encrypted data. Encrypt first.', true); return; }
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(encryptedBlobReady);
+        a.download = lastFileName;
+        a.click();
+        URL.revokeObjectURL(a.href);
+        logCrypto(`📥 Downloaded: ${lastFileName} (password: ${lastUsedPassword})`);
+    };
+    
+    btnUpload.onclick = async () => {
+        if (!encryptedBlobReady) { logCrypto('⚠️ No encrypted data. Encrypt first.', true); return; }
+        const url = uploadUrlInput.value.trim();
+        if (!url) { logCrypto('⚠️ Please enter a URL to upload.', true); return; }
+        logCrypto(`📤 Uploading to ${url} ...`);
+        try {
+            const formData = new FormData();
+            formData.append('file', encryptedBlobReady, lastFileName);
+            const response = await fetch(url, { method: 'POST', body: formData });
+            if (response.ok) {
+                logCrypto(`✅ Upload successful! Server responded with ${response.status}`);
+            } else {
+                logCrypto(`⚠️ Upload completed with status ${response.status}`, true);
+            }
+        } catch (err) {
+            logCrypto(`❌ Upload failed: ${err.message}`, true);
+        }
+    };
+</script>
+</body>
+</html>

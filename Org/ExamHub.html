@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>ExamSphere | Weak Blue File Manager</title>
+  <!-- Google Font & Font Awesome -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: linear-gradient(145deg, #e2edfc 0%, #d4e4f7 100%);
+      font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+      padding: 2rem 1.5rem;
+      min-height: 100vh;
+      color: #1a2c3e;
+    }
+
+    /* weak blue dominant container */
+    .main-container {
+      max-width: 1280px;
+      margin: 0 auto;
+    }
+
+    /* header area */
+    .header-section {
+      margin-bottom: 2.5rem;
+      text-align: center;
+    }
+
+    .header-section h1 {
+      font-size: 2rem;
+      font-weight: 600;
+      background: linear-gradient(135deg, #1f4870, #2d5a8c);
+      background-clip: text;
+      -webkit-background-clip: text;
+      color: transparent;
+      letter-spacing: -0.3px;
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .header-section h1 i {
+      background: none;
+      color: #3b6e9e;
+      font-size: 2rem;
+      background-clip: unset;
+      -webkit-background-clip: unset;
+    }
+
+    .sub {
+      color: #4a6a8a;
+      font-weight: 500;
+      margin-top: 10px;
+      font-size: 0.95rem;
+      background: rgba(255, 255, 255, 0.6);
+      backdrop-filter: blur(2px);
+      display: inline-block;
+      padding: 0.3rem 1.2rem;
+      border-radius: 60px;
+    }
+
+    /* grid layout: upload card + list card */
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 1fr 1.6fr;
+      gap: 1.8rem;
+    }
+
+    /* cards base style */
+    .card {
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(2px);
+      border-radius: 2rem;
+      box-shadow: 0 12px 28px rgba(70, 110, 150, 0.12), 0 2px 6px rgba(0, 0, 0, 0.02);
+      transition: all 0.2s ease;
+      border: 1px solid rgba(150, 190, 230, 0.4);
+      overflow: hidden;
+    }
+
+    .card:hover {
+      box-shadow: 0 20px 32px rgba(70, 110, 150, 0.18);
+      background: rgba(255, 255, 255, 0.97);
+    }
+
+    .card-header {
+      padding: 1.2rem 1.8rem;
+      border-bottom: 1px solid #cde1f2;
+      background: #f6fafe;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .card-header h2 {
+      font-size: 1.4rem;
+      font-weight: 600;
+      color: #1f4870;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .card-header h2 i {
+      color: #5486b6;
+      font-size: 1.3rem;
+    }
+
+    .badge-count {
+      background: #cde1f2;
+      color: #1f4870;
+      padding: 4px 12px;
+      border-radius: 40px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
+    .card-body {
+      padding: 1.6rem 1.8rem;
+    }
+
+    /* upload zone styling */
+    .upload-area {
+      background: #f3f9ff;
+      border-radius: 1.5rem;
+      padding: 1.5rem;
+      border: 1px dashed #8fb6dc;
+      transition: 0.2s;
+      text-align: center;
+    }
+
+    .file-input-label {
+      background: white;
+      border: 1px solid #bad2ec;
+      border-radius: 60px;
+      padding: 0.7rem 1.5rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      font-weight: 500;
+      color: #2c5a7a;
+      transition: 0.2s;
+      margin-bottom: 1rem;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+    }
+
+    .file-input-label:hover {
+      background: #eef3fc;
+      border-color: #7aa7cf;
+    }
+
+    .file-input-label i {
+      font-size: 1.2rem;
+      color: #5486b6;
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+
+    .selected-info {
+      font-size: 0.85rem;
+      color: #2f6b97;
+      background: #e5f0fa;
+      padding: 0.4rem 1rem;
+      border-radius: 30px;
+      display: inline-block;
+      margin: 0.5rem 0 1rem;
+    }
+
+    .btn-upload {
+      background: #7ba9d1;
+      border: none;
+      padding: 0.7rem 1.8rem;
+      border-radius: 2.5rem;
+      font-weight: 600;
+      color: white;
+      font-size: 0.9rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      transition: 0.2s;
+      box-shadow: 0 4px 8px rgba(85, 130, 170, 0.2);
+      margin-top: 6px;
+    }
+
+    .btn-upload:hover {
+      background: #5d90bd;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 14px rgba(70, 110, 150, 0.2);
+    }
+
+    .action-buttons {
+      display: flex;
+      gap: 12px;
+      margin-top: 1.8rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .secondary-btn {
+      background: #eef3fc;
+      border: 1px solid #bbd3ed;
+      padding: 0.5rem 1.2rem;
+      border-radius: 2rem;
+      font-weight: 500;
+      color: #2f5a7c;
+      cursor: pointer;
+      transition: 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.85rem;
+    }
+
+    .secondary-btn:hover {
+      background: #e2edf9;
+      border-color: #91b3d4;
+      color: #124263;
+    }
+
+    .danger-btn {
+      background: #ffe9ec;
+      border-color: #fbc4cd;
+      color: #bc5a6c;
+    }
+    .danger-btn:hover {
+      background: #ffdee3;
+      color: #a13e50;
+    }
+
+    /* file list styling */
+    .file-list-container {
+      max-height: 460px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    .file-item {
+      background: white;
+      border-radius: 1.2rem;
+      padding: 1rem 1.2rem;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      transition: all 0.2s;
+      border: 1px solid #e2eff9;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    }
+
+    .file-item:hover {
+      background: #fafdff;
+      border-color: #c4dbf2;
+      transform: translateX(3px);
+    }
+
+    .file-info {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex: 2;
+      min-width: 180px;
+    }
+
+    .file-icon {
+      width: 40px;
+      height: 40px;
+      background: #e9f2fa;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.3rem;
+      color: #3875a3;
+    }
+
+    .file-details {
+      flex: 1;
+    }
+
+    .file-name {
+      font-weight: 600;
+      color: #1e3b55;
+      word-break: break-word;
+      font-size: 0.95rem;
+    }
+
+    .file-meta {
+      display: flex;
+      gap: 18px;
+      font-size: 0.7rem;
+      color: #6b8cae;
+      margin-top: 5px;
+      flex-wrap: wrap;
+    }
+
+    .file-meta span i {
+      margin-right: 4px;
+      width: 14px;
+    }
+
+    .file-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    .delete-btn {
+      background: transparent;
+      border: none;
+      color: #8fabc9;
+      font-size: 1.1rem;
+      cursor: pointer;
+      padding: 8px 10px;
+      border-radius: 40px;
+      transition: 0.2s;
+    }
+
+    .delete-btn:hover {
+      background: #fbeef1;
+      color: #dd5c6e;
+      transform: scale(1.02);
+    }
+
+    .empty-message {
+      text-align: center;
+      padding: 2rem;
+      color: #7899bb;
+      font-style: italic;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .toast-msg {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1f3b4f;
+      color: white;
+      padding: 10px 24px;
+      border-radius: 60px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      backdrop-filter: blur(12px);
+      background: rgba(30, 60, 85, 0.9);
+      z-index: 1000;
+      transition: opacity 0.2s;
+      pointer-events: none;
+      box-shadow: 0 6px 14px rgba(0,0,0,0.1);
+    }
+
+    /* scrollbar weak blue */
+    .file-list-container::-webkit-scrollbar {
+      width: 5px;
+    }
+    .file-list-container::-webkit-scrollbar-track {
+      background: #e2edf9;
+      border-radius: 10px;
+    }
+    .file-list-container::-webkit-scrollbar-thumb {
+      background: #9fbde0;
+      border-radius: 10px;
+    }
+
+    @media (max-width: 800px) {
+      .dashboard-grid {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+      }
+      body {
+        padding: 1.2rem;
+      }
+      .card-body {
+        padding: 1.2rem;
+      }
+    }
+  </style>
+</head>
+<body>
+<div class="main-container">
+  <div class="header-section">
+    <h1>
+      <i class="fas fa-file-alt"></i> 
+      Exam Vault · Upload List
+    </h1>
+    <div class="sub">
+      <i class="fas fa-cloud-upload-alt"></i> weak blue interface | manage exam papers, assignments & answer sheets
+    </div>
+  </div>
+
+  <div class="dashboard-grid">
+    <!-- LEFT: UPLOAD CARD -->
+    <div class="card">
+      <div class="card-header">
+        <h2><i class="fas fa-upload"></i> Upload exam files</h2>
+        <span class="badge-count"><i class="far fa-file"></i> PDF, DOCX, Images</span>
+      </div>
+      <div class="card-body">
+        <div class="upload-area">
+          <label class="file-input-label" for="examFileInput">
+            <i class="fas fa-folder-open"></i> Browse files
+          </label>
+          <input type="file" id="examFileInput" multiple accept=".pdf,.docx,.doc,.txt,.jpg,.jpeg,.png,.xlsx,.pptx">
+          <div id="fileSelectStatus" class="selected-info">
+            <i class="fas fa-info-circle"></i> No file selected
+          </div>
+          <button id="uploadBtn" class="btn-upload">
+            <i class="fas fa-cloud-upload-alt"></i> Upload to list
+          </button>
+          <div class="action-buttons">
+            <button id="resetSampleBtn" class="secondary-btn"><i class="fas fa-history"></i> Reset samples</button>
+            <button id="clearAllBtn" class="secondary-btn danger-btn"><i class="fas fa-trash-alt"></i> Clear all</button>
+          </div>
+          <div style="font-size: 0.7rem; margin-top: 16px; color:#5882a7;">
+            <i class="fas fa-shield-alt"></i> Max 10MB per file · Duplicate names are skipped
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: FILE LIST CARD -->
+    <div class="card">
+      <div class="card-header">
+        <h2><i class="fas fa-list-ul"></i> Exam file registry</h2>
+        <span id="fileCounterBadge" class="badge-count">0 items</span>
+      </div>
+      <div class="card-body">
+        <div id="fileListContainer" class="file-list-container">
+          <!-- dynamic list will appear here -->
+          <div class="empty-message">
+            <i class="fas fa-inbox" style="font-size: 2.2rem; opacity: 0.6;"></i>
+            <span>No exam files yet.<br>Upload your first file or reset samples.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // -------------------------------
+  //  DATA & UTILITIES
+  // -------------------------------
+  let examFiles = [];   // each file object: { id, name, sizeFormatted, sizeRawBytes, dateAdded, iconClass }
+
+  // Helper: format file size (bytes -> KB/MB)
+  function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+  }
+
+  // Get icon based on extension
+  function getFileIcon(filename) {
+    const ext = filename.split('.').pop().toLowerCase();
+    if (ext === 'pdf') return 'fa-file-pdf';
+    if (ext === 'docx' || ext === 'doc') return 'fa-file-word';
+    if (ext === 'jpg' || ext === 'jpeg' || ext === 'png') return 'fa-file-image';
+    if (ext === 'txt') return 'fa-file-lines';
+    if (ext === 'xlsx' || ext === 'xls') return 'fa-file-excel';
+    if (ext === 'pptx' || ext === 'ppt') return 'fa-file-powerpoint';
+    return 'fa-file';
+  }
+
+  // generate unique ID
+  function generateId() {
+    return Date.now() + '-' + Math.random().toString(36).substring(2, 8);
+  }
+
+  // Check duplicate by name (case-insensitive)
+  function isDuplicateFileName(fileName, currentArray) {
+    return currentArray.some(file => file.name.toLowerCase() === fileName.toLowerCase());
+  }
+
+  // show floating toast
+  let toastTimeout;
+  function showMessage(text, isError = false) {
+    let existingToast = document.querySelector('.toast-msg');
+    if (existingToast) existingToast.remove();
+    const toast = document.createElement('div');
+    toast.className = 'toast-msg';
+    toast.style.backgroundColor = isError ? 'rgba(170, 70, 85, 0.92)' : 'rgba(40, 95, 130, 0.92)';
+    toast.innerHTML = `<i class="fas ${isError ? 'fa-exclamation-circle' : 'fa-check-circle'}"></i> ${text}`;
+    document.body.appendChild(toast);
+    if (toastTimeout) clearTimeout(toastTimeout);
+    toastTimeout = setTimeout(() => {
+      toast.style.opacity = '0';
+      setTimeout(() => toast.remove(), 300);
+    }, 2800);
+  }
+
+  // render file list dynamically
+  function renderFileList() {
+    const container = document.getElementById('fileListContainer');
+    const counterSpan = document.getElementById('fileCounterBadge');
+    if (!container) return;
+    
+    const totalFiles = examFiles.length;
+    counterSpan.innerText = totalFiles + (totalFiles === 1 ? ' item' : ' items');
+    
+    if (totalFiles === 0) {
+      container.innerHTML = `<div class="empty-message">
+        <i class="fas fa-inbox" style="font-size: 2.2rem; opacity: 0.6;"></i>
+        <span>No exam files yet.<br>Upload your first file or reset samples.</span>
+      </div>`;
+      return;
+    }
+    
+    let html = '';
+    examFiles.forEach(file => {
+      const iconClass = file.iconClass || getFileIcon(file.name);
+      html += `
+        <div class="file-item" data-id="${file.id}">
+          <div class="file-info">
+            <div class="file-icon"><i class="fas ${iconClass}"></i></div>
+            <div class="file-details">
+              <div class="file-name">${escapeHtml(file.name)}</div>
+              <div class="file-meta">
+                <span><i class="fas fa-weight-hanging"></i> ${file.sizeFormatted}</span>
+                <span><i class="far fa-calendar-alt"></i> ${file.dateAdded}</span>
+              </div>
+            </div>
+          </div>
+          <div class="file-actions">
+            <button class="delete-btn" data-id="${file.id}" title="Remove file"><i class="fas fa-trash-can"></i></button>
+          </div>
+        </div>
+      `;
+    });
+    container.innerHTML = html;
+  }
+  
+  // simple escape to avoid XSS
+  function escapeHtml(str) {
+    return str.replace(/[&<>]/g, function(m) {
+      if (m === '&') return '&amp;';
+      if (m === '<') return '&lt;';
+      if (m === '>') return '&gt;';
+      return m;
+    }).replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, function(c) {
+      return c;
+    });
+  }
+
+  // Add new file object from native File (with validation)
+  function addFileFromFileObject(fileObj) {
+    // duplicate check
+    if (isDuplicateFileName(fileObj.name, examFiles)) {
+      showMessage(`"${fileObj.name}" already exists in list. Skipped.`, true);
+      return false;
+    }
+    // size limit 10MB
+    const maxBytes = 10 * 1024 * 1024;
+    if (fileObj.size > maxBytes) {
+      showMessage(`"${fileObj.name}" exceeds 10MB limit. Not added.`, true);
+      return false;
+    }
+    if (fileObj.size === 0) {
+      showMessage(`"${fileObj.name}" is empty file.`, true);
+      return false;
+    }
+    
+    const formattedSize = formatFileSize(fileObj.size);
+    const today = new Date().toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric' });
+    const newFile = {
+      id: generateId(),
+      name: fileObj.name,
+      sizeFormatted: formattedSize,
+      sizeRawBytes: fileObj.size,
+      dateAdded: today,
+      iconClass: getFileIcon(fileObj.name)
+    };
+    examFiles.push(newFile);
+    renderFileList();
+    return true;
+  }
+
+  // Process multiple files from input
+  function handleUploadFiles(fileList) {
+    if (!fileList || fileList.length === 0) {
+      showMessage("No files selected. Please choose files.", true);
+      return;
+    }
+    let addedCount = 0;
+    let skippedCount = 0;
+    let sizeErrCount = 0;
+    
+    for (let i = 0; i < fileList.length; i++) {
+      const f = fileList[i];
+      if (isDuplicateFileName(f.name, examFiles)) {
+        skippedCount++;
+        continue;
+      }
+      if (f.size > 10 * 1024 * 1024) {
+        sizeErrCount++;
+        continue;
+      }
+      if (f.size === 0) continue;
+      
+      const formattedSize = formatFileSize(f.size);
+      const today = new Date().toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric' });
+      const newFile = {
+        id: generateId(),
+        name: f.name,
+        sizeFormatted: formattedSize,
+        sizeRawBytes: f.size,
+        dateAdded: today,
+        iconClass: getFileIcon(f.name)
+      };
+      examFiles.push(newFile);
+      addedCount++;
+    }
+    
+    renderFileList();
+    if (addedCount > 0) showMessage(`✅ ${addedCount} file(s) added successfully.`);
+    if (skippedCount > 0) showMessage(`⚠️ ${skippedCount} duplicate(s) skipped.`, true);
+    if (sizeErrCount > 0) showMessage(`⚠️ ${sizeErrCount} file(s) exceeded 10MB limit.`, true);
+    if (addedCount === 0 && skippedCount === 0 && sizeErrCount === 0) {
+      showMessage("No valid files to upload.", true);
+    }
+  }
+
+  // Delete file with confirmation
+  function deleteFileById(fileId) {
+    const targetFile = examFiles.find(f => f.id === fileId);
+    if (!targetFile) return;
+    if (confirm(`Remove "${targetFile.name}" from exam list?`)) {
+      examFiles = examFiles.filter(f => f.id !== fileId);
+      renderFileList();
+      showMessage(`"${targetFile.name}" removed.`);
+    }
+  }
+
+  // Clear all files (confirmation)
+  function clearAllFiles() {
+    if (examFiles.length === 0) {
+      showMessage("List is already empty.", false);
+      return;
+    }
+    if (confirm("⚠️ Clear ALL exam files? This action cannot be undone.")) {
+      examFiles = [];
+      renderFileList();
+      showMessage("All exam files have been cleared.");
+    }
+  }
+
+  // Reset to sample exam files (weak blue default list)
+  function resetToSampleFiles() {
+    if (examFiles.length > 0) {
+      if (!confirm("Replace current files with sample exam documents? Your current list will be lost.")) {
+        return;
+      }
+    }
+    const sampleData = [
+      { name: "Midterm_Mathematics.pdf", sizeBytes: 1280000, date: "Feb 18, 2025", iconHint: "fa-file-pdf" },
+      { name: "Physics_Final_Exam.docx", sizeBytes: 945000, date: "Feb 15, 2025", iconHint: "fa-file-word" },
+      { name: "CS_Algorithms_Quiz.pdf", sizeBytes: 2100000, date: "Feb 10, 2025", iconHint: "fa-file-pdf" },
+      { name: "Lab_Report_Biology.pdf", sizeBytes: 3400000, date: "Feb 20, 2025", iconHint: "fa-file-pdf" },
+      { name: "History_Essay_Guide.docx", sizeBytes: 680000, date: "Feb 12, 2025", iconHint: "fa-file-word" }
+    ];
+    const newFiles = sampleData.map(sample => ({
+      id: generateId(),
+      name: sample.name,
+      sizeFormatted: formatFileSize(sample.sizeBytes),
+      sizeRawBytes: sample.sizeBytes,
+      dateAdded: sample.date,
+      iconClass: sample.iconHint
+    }));
+    examFiles = newFiles;
+    renderFileList();
+    showMessage("Sample exam files loaded (weak blue collection).");
+  }
+
+  // event delegation for delete buttons (dynamic)
+  function setupGlobalListeners() {
+    const container = document.getElementById('fileListContainer');
+    if (container) {
+      container.addEventListener('click', (e) => {
+        const deleteBtn = e.target.closest('.delete-btn');
+        if (deleteBtn && deleteBtn.dataset.id) {
+          e.preventDefault();
+          deleteFileById(deleteBtn.dataset.id);
+        }
+      });
+    }
+    
+    // upload button logic
+    const uploadBtn = document.getElementById('uploadBtn');
+    const fileInput = document.getElementById('examFileInput');
+    if (uploadBtn && fileInput) {
+      uploadBtn.addEventListener('click', () => {
+        if (fileInput.files.length === 0) {
+          showMessage("Please select files first using browse.", true);
+          return;
+        }
+        handleUploadFiles(fileInput.files);
+        // reset file input & preview status
+        fileInput.value = '';
+        document.getElementById('fileSelectStatus').innerHTML = '<i class="fas fa-info-circle"></i> No file selected';
+      });
+    }
+    
+    // update selected files status
+    if (fileInput) {
+      fileInput.addEventListener('change', (e) => {
+        const files = e.target.files;
+        if (files.length === 0) {
+          document.getElementById('fileSelectStatus').innerHTML = '<i class="fas fa-info-circle"></i> No file selected';
+        } else if (files.length === 1) {
+          document.getElementById('fileSelectStatus').innerHTML = `<i class="fas fa-file"></i> ${files[0].name} (${formatFileSize(files[0].size)})`;
+        } else {
+          document.getElementById('fileSelectStatus').innerHTML = `<i class="fas fa-layer-group"></i> ${files.length} files selected, total ${formatFileSize(Array.from(files).reduce((acc, f) => acc + f.size, 0))}`;
+        }
+      });
+    }
+    
+    // Clear all button
+    const clearBtn = document.getElementById('clearAllBtn');
+    if (clearBtn) clearBtn.addEventListener('click', clearAllFiles);
+    
+    // Reset sample button
+    const resetBtn = document.getElementById('resetSampleBtn');
+    if (resetBtn) resetBtn.addEventListener('click', resetToSampleFiles);
+  }
+
+  // initial dummy files for better visual
+  function initDefaultFiles() {
+    // initial gentle sample set that matches weak blue style
+    examFiles = [
+      { id: generateId(), name: "Final_Exam_Scheme.pdf", sizeFormatted: "1.8 MB", sizeRawBytes: 1880000, dateAdded: "Mar 1, 2025", iconClass: "fa-file-pdf" },
+      { id: generateId(), name: "Quiz_Answer_Sheet.docx", sizeFormatted: "0.5 MB", sizeRawBytes: 512000, dateAdded: "Feb 28, 2025", iconClass: "fa-file-word" },
+      { id: generateId(), name: "Lab_Exam_Instructions.pdf", sizeFormatted: "2.3 MB", sizeRawBytes: 2400000, dateAdded: "Feb 25, 2025", iconClass: "fa-file-pdf" }
+    ];
+    renderFileList();
+  }
+
+  // start everything
+  function init() {
+    initDefaultFiles();
+    setupGlobalListeners();
+  }
+  
+  init();
+</script>
+</body>
+</html>

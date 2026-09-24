@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>IndexedDB Image + ZIP Manager</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+<style>
+body{margin:0;background:#111;color:#fff;font-family:sans-serif;text-align:center}
+video{width:100%;max-height:200px}
+canvas{border:1px solid #555;margin-top:10px}
+.card{border:1px solid #444;margin:10px;padding:10px;display:inline-block}
+img{width:120px;height:120px;object-fit:cover}
+button{margin:4px;padding:6px}
+</style>
+</head>
+
+<body>
+
+<video id="video" autoplay playsinline muted></video>
+
+<br>
+<button onclick="startCamera()">Start Camera</button>
+<button onclick="capture()">Capture</button>
+
+<br><br>
+Cols <input type="number" id="cols" value="3">
+Rows <input type="number" id="rows" value="3">
+<button onclick="setGrid()">Set Grid</button>
+<button onclick="process()">Process</button>
+
+<br><br>
+<button onclick="createZIP()">Create ZIP</button>
+<button onclick="uploadZIP()">Upload ZIP</button>
+
+<br><br>
+<button onclick="bulkDelete()">Bulk Delete</button>
+<button onclick="undoDelete()">Undo Delete</button>
+
+<canvas id="canvas"></canvas>
+
+<h3>Images</h3>
+<div id="images"></div>
+
+<h3>ZIP Files</h3>
+<div id="zips"></div>
+
+<script>
+let video=document.getElementById("video")
+let canvas=document.getElementById("canvas")
+let ctx=canvas.getContext("2d")
+
+let db
+let gridCols=[]
+let gridRows=[]
+let labels={}
+let selected=new Set()
+let lastDeleted=null
+let zipBlob=null
+
+let request=indexedDB.open("myDB",2)
+
+request.onupgradeneeded=function(e){
+let db=e.target.result
+if(!db.objectStoreNames.contains("images")){
+db.createObjectStore("images",{keyPath:"id",autoIncrement:true})
+}
+if(!db.objectStoreNames.contains("zips")){
+db.createObjectStore("zips",{keyPath:"id",autoIncrement:true})
+}
+}
+
+request.onsuccess=function(e){
+db=e.target.result
+loadImages()
+loadZips()
+}
+
+async function startCamera(){
+let stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}})
+video.srcObject=stream
+await video.play()
+}
+
+function capture(){
+canvas.width=video.videoWidth
+canvas.height=video.videoHeight
+draw()
+}
+
+function setGrid(){
+let c=+cols.value
+let r=+rows.value
+
+gridCols=[]
+gridRows=[]
+labels={}
+
+let cw=canvas.width/(c+1)
+let rh=canvas.height/(r+1)
+
+for(let i=1;i<=c;i++)gridCols.push(i*cw)
+for(let j=1;j<=r;j++)gridRows.push(j*rh)
+
+draw()
+}
+
+function draw(){
+ctx.clearRect(0,0,canvas.width,canvas.height)
+ctx.drawImage(video,0,0,canvas.width,canvas.height)
+
+ctx.strokeStyle="white"
+ctx.setLineDash([5,5])
+
+gridCols.forEach(x=>{
+ctx.beginPath()
+ctx.moveTo(x,0)
+ctx.lineTo(x,canvas.height)
+ctx.stroke()
+})
+
+gridRows.forEach(y=>{
+ctx.beginPath()
+ctx.moveTo(0,y)
+ctx.lineTo(canvas.width,y)
+ctx.stroke()
+})
+
+drawLabels()
+}
+
+canvas.onclick=function(e){
+let rect=canvas.getBoundingClientRect()
+let x=e.clientX-rect.left
+let y=e.clientY-rect.top
+
+let xs=[0,...gridCols,canvas.width]
+let ys=[0,...gridRows,canvas.height]
+
+for(let i=0;i<xs.length-1;i++){
+for(let j=0;j<ys.length-1;j++){
+
+if(x>xs[i]&&x<xs[i+1]&&y>ys[j]&&y<ys[j+1]){
+let key=i+"-"+j
+let val=prompt("Label",labels[key]||"")
+if(val!==null){
+labels[key]=val
+draw()
+}
+}
+}
+}
+}
+
+function drawLabels(){
+ctx.fillStyle="yellow"
+ctx.font="16px sans-serif"
+ctx.textAlign="center"
+ctx.textBaseline="middle"
+
+let xs=[0,...gridCols,canvas.width]
+let ys=[0,...gridRows,canvas.height]
+
+for(let i=0;i<xs.length-1;i++){
+for(let j=0;j<ys.length-1;j++){
+
+let key=i+"-"+j
+if(labels[key]){
+let cx=(xs[i]+xs[i+1])/2
+let cy=(ys[j]+ys[j+1])/2
+ctx.fillText(labels[key],cx,cy)
+}
+}
+}
+}
+
+function process(){
+let xs=[0,...gridCols,canvas.width]
+let ys=[0,...gridRows,canvas.height]
+
+for(let i=0;i<xs.length-1;i++){
+for(let j=0;j<ys.length-1;j++){
+
+let key=i+"-"+j
+if(!labels[key])continue
+
+let w=xs[i+1]-xs[i]
+let h=ys[j+1]-ys[j]
+
+let temp=document.createElement("canvas")
+temp.width=w
+temp.height=h
+
+let tctx=temp.getContext("2d")
+tctx.drawImage(canvas,xs[i],ys[j],w,h,0,0,w,h)
+
+let data=temp.toDataURL()
+
+saveImage(labels[key],data)
+}
+}
+loadImages()
+}
+
+function saveImage(name,data){
+let tx=db.transaction("images","readwrite")
+tx.objectStore("images").add({name,data})
+}
+
+function loadImages(){
+let div=document.getElementById("images")
+div.innerHTML=""
+
+let tx=db.transaction("images","readonly")
+let store=tx.objectStore("images")
+
+store.openCursor().onsuccess=function(e){
+let cursor=e.target.result
+if(!cursor) return
+
+let d=cursor.value
+let id=d.id
+
+let card=document.createElement("div")
+card.className="card"
+
+let img=document.createElement("img")
+img.src=d.data
+
+let name=document.createElement("div")
+name.innerText=d.name
+
+let chk=document.createElement("input")
+chk.type="checkbox"
+chk.onchange=()=>chk.checked?selected.add(id):selected.delete(id)
+
+let del=document.createElement("button")
+del.innerText="Delete"
+del.onclick=()=>deleteImage(id)
+
+let rep=document.createElement("button")
+rep.innerText="Replace"
+rep.onclick=()=>replaceImage(id)
+
+let ren=document.createElement("button")
+ren.innerText="Rename"
+ren.onclick=()=>renameImage(id)
+
+card.appendChild(chk)
+card.appendChild(img)
+card.appendChild(name)
+card.appendChild(del)
+card.appendChild(rep)
+card.appendChild(ren)
+
+div.appendChild(card)
+
+cursor.continue()
+}
+}
+
+function deleteImage(id){
+let tx=db.transaction("images","readwrite")
+let store=tx.objectStore("images")
+
+store.get(id).onsuccess=function(e){
+lastDeleted=e.target.result
+store.delete(id)
+loadImages()
+}
+}
+
+function undoDelete(){
+if(!lastDeleted){alert("Nothing");return}
+let tx=db.transaction("images","readwrite")
+tx.objectStore("images").add(lastDeleted)
+lastDeleted=null
+loadImages()
+}
+
+function renameImage(id){
+let name=prompt("New name")
+if(!name)return
+
+let tx=db.transaction("images","readwrite")
+let store=tx.objectStore("images")
+
+store.get(id).onsuccess=function(e){
+let d=e.target.result
+d.name=name
+store.put(d)
+loadImages()
+}
+}
+
+let replaceId=null
+function replaceImage(id){
+replaceId=id
+alert("Capture new image then click Process")
+}
+
+function createZIP(){
+let zip=new JSZip()
+
+let tx=db.transaction("images","readonly")
+let store=tx.objectStore("images")
+
+store.openCursor().onsuccess=function(e){
+let cursor=e.target.result
+if(!cursor) {
+zip.generateAsync({type:"blob"}).then(blob=>{
+zipBlob=blob
+
+let tx2=db.transaction("zips","readwrite")
+tx2.objectStore("zips").add({name:"dataset_"+Date.now()+".zip",data:blob})
+
+loadZips()
+
+let a=document.createElement("a")
+a.href=URL.createObjectURL(blob)
+a.download="dataset.zip"
+a.click()
+})
+return
+}
+
+let d=cursor.value
+zip.file(d.name+".png", d.data.split(",")[1], {base64:true})
+
+cursor.continue()
+}
+}
+
+function loadZips(){
+let div=document.getElementById("zips")
+div.innerHTML=""
+
+let tx=db.transaction("zips","readonly")
+let store=tx.objectStore("zips")
+
+store.openCursor().onsuccess=function(e){
+let cursor=e.target.result
+if(!cursor) return
+
+let d=cursor.value
+
+let card=document.createElement("div")
+card.className="card"
+
+let name=document.createElement("div")
+name.innerText=d.name
+
+let btn=document.createElement("button")
+btn.innerText="Download"
+btn.onclick=()=>{
+let a=document.createElement("a")
+a.href=URL.createObjectURL(d.data)
+a.download=d.name
+a.click()
+}
+
+card.appendChild(name)
+card.appendChild(btn)
+
+div.appendChild(card)
+
+cursor.continue()
+}
+}
+
+function bulkDelete(){
+if(selected.size===0){alert("No selection");return}
+
+let tx=db.transaction("images","readwrite")
+let store=tx.objectStore("images")
+
+selected.forEach(id=>store.delete(id))
+selected.clear()
+loadImages()
+}
+
+function uploadZIP(){
+if(!zipBlob){alert("Create ZIP first");return}
+
+let formData=new FormData()
+formData.append("file",zipBlob,"dataset.zip")
+
+fetch("YOUR_UPLOAD_URL",{method:"POST",body:formData})
+.then(()=>alert("Uploaded"))
+.catch(()=>alert("Failed"))
+}
+</script>
+
+</body>
+</html>

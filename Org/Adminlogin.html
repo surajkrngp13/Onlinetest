@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Pro</title>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:Segoe UI}
+body{
+background:linear-gradient(135deg,#fff5ef,#ffe8db);
+color:#333;
+overflow:hidden
+}
+
+/* Layout */
+.app{display:flex;height:100vh}
+
+/* Sidebar */
+.sidebar{
+width:230px;
+background:rgba(255,255,255,.6);
+backdrop-filter:blur(12px);
+border-right:1px solid rgba(255,122,61,.2);
+padding:15px
+}
+.logo{
+font-size:20px;
+color:#ff7a3d;
+margin-bottom:20px;
+font-weight:bold
+}
+.nav a{
+display:block;
+padding:10px;
+margin:5px 0;
+border-radius:8px;
+text-decoration:none;
+color:#444;
+transition:.2s
+}
+.nav a:hover{
+background:rgba(255,122,61,.1);
+color:#ff7a3d
+}
+
+/* Main */
+.main{flex:1;display:flex;flex-direction:column}
+
+/* Topbar */
+.top{
+display:flex;
+justify-content:space-between;
+align-items:center;
+padding:12px 20px;
+background:rgba(255,255,255,.6);
+backdrop-filter:blur(12px);
+border-bottom:1px solid rgba(255,122,61,.2)
+}
+.search{
+padding:8px 12px;
+border:none;
+border-radius:20px;
+background:#fff;
+outline:none;
+width:200px
+}
+.user{
+display:flex;
+align-items:center;
+gap:10px
+}
+.user img{
+width:35px;height:35px;border-radius:50%
+}
+
+/* Content */
+.content{
+padding:20px;
+overflow:auto
+}
+
+/* Cards */
+.cards{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+gap:15px;
+margin-bottom:20px
+}
+.card{
+background:rgba(255,255,255,.7);
+backdrop-filter:blur(10px);
+padding:15px;
+border-radius:12px;
+box-shadow:0 4px 12px rgba(0,0,0,.05);
+transition:.2s
+}
+.card:hover{transform:translateY(-4px)}
+.card h3{color:#ff7a3d}
+
+/* Table */
+.table{
+width:100%;
+border-collapse:collapse;
+background:rgba(255,255,255,.7);
+border-radius:12px;
+overflow:hidden;
+box-shadow:0 4px 12px rgba(0,0,0,.05)
+}
+.table th,.table td{
+padding:12px;
+font-size:14px
+}
+.table th{
+background:rgba(255,122,61,.15);
+color:#ff7a3d
+}
+.table tr:nth-child(even){background:rgba(255,122,61,.05)}
+
+/* Button */
+.btn{
+background:linear-gradient(45deg,#ff9a5a,#ff7a3d);
+border:none;
+color:#fff;
+padding:6px 10px;
+border-radius:6px;
+cursor:pointer
+}
+
+/* Scroll */
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-thumb{background:#ff7a3d;border-radius:10px}
+
+/* Mobile */
+@media(max-width:768px){
+.sidebar{display:none}
+.search{width:120px}
+}
+</style>
+</head>
+
+<body>
+
+<div class="app">
+
+  <div class="sidebar">
+    <div class="logo">Admin Pro</div>
+    <div class="nav">
+      <a href="/AdminUpload.html">admin upload</a>
+      <a href="/photozip.html">photozip</a>
+      <a href="/makepngbig.html">makepngbig</a>
+      <a href="/kidsQuestion.html">kids question</a>
+      <a href="/ReasoningQuestionTemplet.html">ReasoningQuestionTemplet</a>
+    </div>
+  </div>
+
+  <div class="main">
+
+    <div class="top">
+        <a href="/" style="font-size:22px;text-decoration:none">🏠</a>
+      <input class="search" placeholder="Search...">
+      <div style="display:flex;justify-content:flex-end;padding:10px">
+<div onclick="h()" style="display:flex;flex-direction:column;align-items:center;font-family:Arial;cursor:pointer">
+<div style="width:50px;height:50px;background:#fff;border-radius:50%;display:flex;justify-content:center;align-items:center;overflow:hidden;box-shadow:0 2px 6px rgba(0,0,0,.2)">
+<span id="i" style="font-size:30px">👤</span>
+<img id="p" style="width:100%;height:100%;object-fit:cover;display:none">
+</div>
+<div id="n" style="margin-top:6px;font-size:13px">Guest</div>
+</div>
+</div>
+<script>
+let s=0,n=document.getElementById("n"),p=document.getElementById("p"),i=document.getElementById("i");
+function u(){try{let d=JSON.parse(sessionStorage.getItem("user"));if(d){s=1;n.innerText=d.name||"User";p.src=d.photo||"";p.style.display="block";i.style.display="none"}else{throw""}}catch(e){s=0;n.innerText="Guest";p.style.display="none";i.style.display="block"}}
+u();
+function h(){s?o():l()}
+function l(){try{let d=JSON.parse(sessionStorage.getItem("user"));d?u():(sessionStorage.setItem("redirectAfterLogin",location.href),location='/signinplease.html')}catch(e){location='/signinplease.html'}}
+function o(){sessionStorage.removeItem("user");u()}
+</script>
+    </div>
+
+    <div class="content">
+
+      <div class="cards">
+        <div class="card"><h3>320</h3><p>Total Users</p></div>
+        <div class="card"><h3>150</h3><p>Orders</p></div>
+        <div class="card"><h3>$1,200</h3><p>Revenue</p></div>
+        <div class="card"><h3>12</h3><p>Pending</p></div>
+      </div>
+
+      <table class="table">
+        <tr>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Status</th>
+          <th>Action</th>
+        </tr>
+        <tr>
+          <td>Rahul</td>
+          <td>rahul@mail.com</td>
+          <td>Active</td>
+          <td><button class="btn">View</button></td>
+        </tr>
+        <tr>
+          <td>Neha</td>
+          <td>neha@mail.com</td>
+          <td>Inactive</td>
+          <td><button class="btn">View</button></td>
+        </tr>
+      </table>
+
+    </div>
+
+  </div>
+
+</div>
+
+</body>
+</html>
