@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Decrypt Viewer FIXED</title>
+
+<style>
+body{font-family:Arial;padding:20px;background:#f5f5f5}
+button{padding:10px 15px;margin:5px}
+input{padding:8px;width:250px}
+pre{background:#000;color:#0f0;padding:15px;margin-top:10px;white-space:pre-wrap}
+</style>
+</head>
+<body>
+
+<h2>🔓 Decryption Viewer</h2>
+
+<input type="password" id="pass" placeholder="Enter Password"><br><br>
+
+<button onclick="loadData()">Load & Decrypt</button>
+
+<hr>
+
+<pre id="output">No Data</pre>
+
+<script>
+let db;
+
+const reqDB = indexedDB.open("QuizDB", 2);
+
+reqDB.onsuccess = e=>{
+db = e.target.result;
+};
+
+reqDB.onerror = ()=>{
+alert("DB error");
+};
+
+function fromBase64(b64){
+let bin=atob(b64)
+let arr=new Uint8Array(bin.length)
+for(let i=0;i<bin.length;i++){
+arr[i]=bin.charCodeAt(i)
+}
+return arr
+}
+
+function getKey(password,salt){
+let enc=new TextEncoder().encode(password)
+
+return crypto.subtle.importKey("raw",enc,"PBKDF2",false,["deriveKey"])
+.then(keyMaterial=>{
+return crypto.subtle.deriveKey(
+{name:"PBKDF2",salt:salt,iterations:100000,hash:"SHA-256"},
+keyMaterial,
+{name:"AES-GCM",length:256},
+false,
+["decrypt"]
+)
+})
+}
+
+function decryptLine(line,password){
+if(!line) return Promise.resolve("")
+
+const parts=line.split("¦")
+if(parts.length<4) return Promise.resolve("❌ Invalid line")
+
+const [time,saltB64,ivB64,dataB64]=parts     
+let salt=fromBase64(saltB64)
+let iv=fromBase64(ivB64)
+let data=fromBase64(dataB64)
+
+return getKey(password,salt).then(key=>{
+return crypto.subtle.decrypt(
+{name:"AES-GCM",iv},
+key,
+data
+)
+}).then(dec=>{
+return new TextDecoder().decode(dec)
+})
+}
+
+function loadData(){
+if(!db){
+alert("DB not ready")
+return
+}
+
+let pass=document.getElementById("pass").value
+if(!pass){
+alert("Enter password")
+return
+}
+
+let tx=db.transaction("files","readonly")
+let store=tx.objectStore("files")
+
+let reqGet=store.get("mynote5.txt")
+
+reqGet.onsuccess=async ()=>{
+let data=reqGet.result
+console.log(data)
+if(!data || !data.content){
+document.getElementById("output").innerText="No data found"
+return
+}
+
+let lines=data.content.split("\n").filter(l=>l.trim()!=="")
+let result=""
+console.log(lines)
+for(let line of lines){
+try{
+result += await decryptLine(line,pass) + "\n\n"
+}catch(e){
+result += "❌ Wrong password or corrupted data\n\n"
+}
+}
+
+document.getElementById("output").innerText=result
+}
+}
+</script>
+
+</body>
+</html>

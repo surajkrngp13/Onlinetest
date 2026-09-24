@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Decrypt Page</title>
+</head>
+<body>
+
+<h3>Decrypt & View</h3>
+
+<input type="password" id="pass" placeholder="password"><br><br>
+
+<button onclick="showText()">Decrypt All</button>
+
+<pre id="output"></pre>
+
+<script>
+let db;
+
+let dbReq = indexedDB.open("vaultDB", 1);
+
+dbReq.onupgradeneeded = function(e) {
+  db = e.target.result;
+  if (!db.objectStoreNames.contains("files")) {
+    db.createObjectStore("files", { keyPath: "id" });
+  }
+};
+
+dbReq.onsuccess = function(e) {
+  db = e.target.result;
+};
+
+function b64ToBuf(b64) {
+  return Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+}
+
+async function getKey(password) {
+  let enc = new TextEncoder().encode(password);
+  let hash = await crypto.subtle.digest("SHA-256", enc);
+
+  return crypto.subtle.importKey(
+    "raw",
+    hash,
+    "AES-GCM",
+    false,
+    ["encrypt", "decrypt"]
+  );
+}
+
+async function decrypt(obj, password) {
+  let key = await getKey(password);
+
+  let iv = b64ToBuf(obj.iv);
+  let data = b64ToBuf(obj.data);
+
+  let decrypted = await crypto.subtle.decrypt(
+    { name: "AES-GCM", iv },
+    key,
+    data
+  );
+
+  return new TextDecoder().decode(decrypted);
+}
+
+function showText() {
+  let pass = document.getElementById("pass").value;
+
+  if (!pass) {
+    alert("Enter password");
+    return;
+  }
+
+  let tx = db.transaction("files", "readonly");
+  let store = tx.objectStore("files");
+
+  let req = store.get("reportcard.txt");
+
+  req.onsuccess = async function() {
+    let data = req.result;
+
+    if (!data || !data.content.length) {
+      document.getElementById("output").innerText = "No data";
+      return;
+    }
+
+    let result = "";
+
+    for (let item of data.content) {
+      try {
+        result += await decrypt(item, pass) + "\n\n";
+      } catch (e) {
+        result = "[Wrong password or corrupted data]";
+        break;
+      }
+    }
+
+    document.getElementById("output").innerText = result;
+  };
+}
+</script>
+
+</body>
+</html>

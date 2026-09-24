@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Decrypt Viewer Only (FIXED)</title>
+
+<style>
+body{font-family:Arial;padding:20px;background:#f5f5f5}
+button{padding:10px 15px;margin:5px}
+input{padding:8px;width:250px}
+pre{background:#000;color:#0f0;padding:15px;white-space:pre-wrap}
+</style>
+</head>
+<body>
+
+<h2>🔓 Decrypt Viewer (Read Only)</h2>
+
+<input type="password" id="pass" placeholder="Enter password"><br><br>
+
+<button onclick="loadAndDecrypt()">Show Data</button>
+
+<hr>
+
+<pre id="out">Loading DB...</pre>
+
+<script>
+let db;
+
+function openDB(){
+return new Promise((resolve,reject)=>{
+const req = indexedDB.open("QuizDB", 3);
+
+req.onupgradeneeded = e=>{
+let db = e.target.result;
+if(!db.objectStoreNames.contains("files")){
+db.createObjectStore("files",{keyPath:"id"});
+}
+};
+
+req.onsuccess = e=>{
+db = e.target.result;
+resolve(db);
+};
+
+req.onerror = ()=>{
+reject("DB error");
+};
+});
+}
+
+const dbReady = openDB();
+
+dbReady.then(()=>{
+document.getElementById("out").innerText="DB Ready ✔";
+}).catch(()=>{
+document.getElementById("out").innerText="DB Failed ❌";
+});
+
+function fromBase64(b64){
+let bin=atob(b64)
+let arr=new Uint8Array(bin.length)
+for(let i=0;i<bin.length;i++){
+arr[i]=bin.charCodeAt(i)
+}
+return arr
+}
+
+function getKey(password,salt){
+let enc=new TextEncoder().encode(password)
+
+return crypto.subtle.importKey(
+"raw",
+enc,
+"PBKDF2",
+false,
+["deriveKey"]
+).then(keyMaterial=>{
+return crypto.subtle.deriveKey(
+{name:"PBKDF2",salt:salt,iterations:100000,hash:"SHA-256"},
+keyMaterial,
+{name:"AES-GCM",length:256},
+false,
+["decrypt"]
+)
+})
+}
+
+function decryptLine(line,password){
+const parts=line.split("|")
+if(parts.length<4) return Promise.resolve("")
+
+const [,saltB64,ivB64,dataB64]=parts
+
+let salt=fromBase64(saltB64)
+let iv=fromBase64(ivB64)
+let data=fromBase64(dataB64)
+
+return getKey(password,salt).then(key=>{
+return crypto.subtle.decrypt(
+{name:"AES-GCM",iv},
+key,
+data
+)
+}).then(dec=>{
+return new TextDecoder().decode(dec)
+})
+}
+
+async function loadAndDecrypt(){
+
+await dbReady;
+
+let pass=document.getElementById("pass").value
+if(!pass){
+alert("Enter password")
+return
+}
+
+let tx=db.transaction("files","readonly")
+let store=tx.objectStore("files")
+
+let reqGet=store.get("y1.txt")
+
+reqGet.onsuccess=async ()=>{
+
+let data=reqGet.result
+
+if(!data || !data.content){
+document.getElementById("out").innerText="No file found"
+return
+}
+
+let lines=data.content.split("\n").filter(l=>l.trim()!=="")
+
+let result=""
+
+for(let line of lines){
+try{
+result += await decryptLine(line,pass) + "\n"
+}catch(e){
+result += "❌ Wrong password or corrupted data\n"
+}
+}
+
+document.getElementById("out").innerText=result
+}
+}
+</script>
+
+</body>
+</html>

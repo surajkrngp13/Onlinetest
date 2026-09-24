@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Encrypt & Save FIXED</title>
+</head>
+<body>
+
+<h3>🔐 Encrypt & Save</h3>
+
+<textarea id="text" rows="6" cols="40"></textarea><br><br>
+<input type="password" id="pass" placeholder="password"><br><br>
+
+<button onclick="saveText()">Encrypt + Save</button>
+
+<pre id="out"></pre>
+
+<script>
+let db;
+
+const req = indexedDB.open("QuizDB", 2);
+
+req.onupgradeneeded = e => {
+db = e.target.result;
+if (!db.objectStoreNames.contains("files")) {
+db.createObjectStore("files", { keyPath: "id" });
+}
+};
+
+req.onsuccess = e => {
+db = e.target.result;
+};
+
+function toBase64(bytes){
+let bin=""
+for(let i=0;i<bytes.length;i++){
+bin+=String.fromCharCode(bytes[i])
+}
+return btoa(bin)
+}
+
+function getKey(password,salt){
+let enc=new TextEncoder().encode(password)
+return crypto.subtle.importKey("raw",enc,"PBKDF2",false,["deriveKey"])
+.then(keyMaterial=>{
+return crypto.subtle.deriveKey(
+{name:"PBKDF2",salt:salt,iterations:100000,hash:"SHA-256"},
+keyMaterial,
+{name:"AES-GCM",length:256},
+false,
+["encrypt","decrypt"]
+)
+})
+}
+
+function encrypt(text,password){
+let salt=crypto.getRandomValues(new Uint8Array(16))
+let iv=crypto.getRandomValues(new Uint8Array(12))
+return getKey(password,salt).then(key=>{
+let data=new TextEncoder().encode(text)
+return crypto.subtle.encrypt({name:"AES-GCM",iv},key,data)
+.then(enc=>{
+return Date.now()+"¦"+toBase64(salt)+"¦"+toBase64(iv)+"¦"+toBase64(new Uint8Array(enc))
+})
+})
+}
+
+function saveText(){
+if(!db){
+alert("DB not ready")
+return
+}
+
+let text=document.getElementById("text").value
+let pass=document.getElementById("pass").value
+
+if(!text||!pass){
+alert("Fill both")
+return
+}
+
+encrypt(text,pass).then(line=>{
+let tx=db.transaction("files","readwrite")
+let store=tx.objectStore("files")
+
+let g=store.get("mynote5.txt")
+
+g.onsuccess=()=>{
+let data=g.result
+if(!data){
+data={id:"mynote5.txt",content:""}
+}
+data.content+=line+"\n"
+store.put(data)
+document.getElementById("out").textContent="Saved"
+}
+})
+}
+</script>
+
+</body>
+</html>

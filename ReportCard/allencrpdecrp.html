@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>IndexedDB Vault</title>
+</head>
+<body>
+
+<input type="file" id="fileInput">
+<input type="text" id="folder" placeholder="folder name">
+<button onclick="uploadFile()">Upload</button>
+
+<hr>
+
+<div id="list"></div>
+
+<script>
+let db;
+
+const request = indexedDB.open("filesDB", 2);
+
+request.onupgradeneeded = function(e) {
+  db = e.target.result;
+
+  if (db.objectStoreNames.contains("files")) {
+    db.deleteObjectStore("files");
+  }
+
+  db.createObjectStore("files", { keyPath: ["folder", "name"] });
+};
+
+request.onsuccess = function(e) {
+  db = e.target.result;
+  loadFiles();
+};
+
+request.onerror = function(e) {
+  console.log("DB ERROR", e);
+};
+
+function uploadFile() {
+  const file = document.getElementById("fileInput").files[0];
+  const folderInput = document.getElementById("folder").value;
+
+  if (!file) {
+    alert("Select file first");
+    return;
+  }
+
+  const folder = (folderInput || "root").trim();
+  const name = file.name ? file.name.trim() : "";
+
+  if (!name) {
+    alert("Invalid file name");
+    return;
+  }
+
+  const reader = new FileReader();
+
+  reader.onload = function() {
+    const tx = db.transaction("files", "readwrite");
+    const store = tx.objectStore("files");
+
+    const data = {
+      folder: folder,
+      name: name,
+      data: new Blob([reader.result])
+    };
+
+    const req = store.put(data);
+
+    req.onerror = function(e) {
+      console.log("PUT ERROR", e);
+    };
+
+    tx.oncomplete = function() {
+      loadFiles();
+    };
+  };
+
+  reader.readAsArrayBuffer(file);
+}
+
+function loadFiles() {
+  const tx = db.transaction("files", "readonly");
+  const store = tx.objectStore("files");
+
+  const req = store.getAll();
+
+  req.onsuccess = function() {
+    const files = req.result || [];
+
+    let html = "";
+
+    files.forEach(f => {
+      html += `
+        <div>
+          <b>${f.folder}</b> / ${f.name}
+          <button onclick="openFile('${f.folder}','${f.name}')">Open</button>
+        </div>
+      `;
+    });
+
+    document.getElementById("list").innerHTML = html;
+  };
+}
+
+function openFile(folder, name) {
+  const tx = db.transaction("files", "readonly");
+  const store = tx.objectStore("files");
+
+  const req = store.get([folder, name]);
+
+  req.onsuccess = function() {
+    const file = req.result;
+
+    if (!file) {
+      alert("File not found");
+      return;
+    }
+
+    const url = URL.createObjectURL(file.data);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = file.name;
+    a.click();
+  };
+}
+</script>
+
+</body>
+</html>

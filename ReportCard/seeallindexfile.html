@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>IndexedDB File Vault</title>
+</head>
+<body>
+
+<input type="file" id="fileInput">
+<input type="text" id="folder" placeholder="folder name">
+<button onclick="uploadFile()">Submit</button>
+
+<button onclick="deleteAllFiles()">🗑 Delete All Files</button>
+
+<hr>
+
+<div id="list"></div>
+
+<script>
+let db;
+
+let dbReq = indexedDB.open("filesDB", 2);
+
+dbReq.onupgradeneeded = function(e) {
+  db = e.target.result;
+  if (!db.objectStoreNames.contains("files")) {
+    db.createObjectStore("files", { keyPath: "id" });
+  }
+};
+
+dbReq.onsuccess = function(e) {
+  db = e.target.result;
+  loadFiles();
+};
+
+function uploadFile() {
+  let file = document.getElementById("fileInput").files[0];
+  let folder = document.getElementById("folder").value || "root";
+
+  let reader = new FileReader();
+
+  reader.onload = function() {
+    let blob = new Blob([reader.result]);
+
+    let data = {
+      id: crypto.randomUUID(),
+      folder: folder,
+      name: file.name,
+      data: blob,
+      encrypted: true
+    };
+
+    let tx = db.transaction("files", "readwrite");
+    let store = tx.objectStore("files");
+
+    store.put(data);
+
+    tx.oncomplete = function() {
+      loadFiles();
+    };
+  };
+
+  reader.readAsArrayBuffer(file);
+}
+
+function loadFiles() {
+  let tx = db.transaction("files", "readonly");
+  let store = tx.objectStore("files");
+
+  let getReq = store.getAll();
+
+  getReq.onsuccess = function() {
+    let files = getReq.result;
+
+    let html = "";
+
+    files.forEach(f => {
+      html += `
+        <div style="margin-bottom:10px;">
+          <b>${f.folder}</b> / ${f.name}
+          <button onclick="openFile('${f.folder}','${f.name}')">Open</button>
+          <button onclick="deleteFile('${f.id}')">Delete</button>
+        </div>
+      `;
+    });
+
+    document.getElementById("list").innerHTML = html;
+  };
+}
+
+function openFile(folder, name) {
+  let tx = db.transaction("files", "readonly");
+  let store = tx.objectStore("files");
+
+  let getReq = store.getAll();
+
+  getReq.onsuccess = function() {
+    let files = getReq.result;
+
+    let file = files.find(f =>
+      f.folder === folder &&
+      f.name === name
+    );
+
+    if (!file) {
+      alert("File not found");
+      return;
+    }
+
+    let url = URL.createObjectURL(file.data);
+
+    let a = document.createElement("a");
+    a.href = url;
+    a.download = file.name;
+    a.click();
+  };
+}
+
+function deleteFile(id) {
+  let tx = db.transaction("files", "readwrite");
+  let store = tx.objectStore("files");
+
+  store.delete(id);
+
+  tx.oncomplete = function() {
+    loadFiles();
+  };
+}
+
+function deleteAllFiles() {
+  let tx = db.transaction("files", "readwrite");
+  let store = tx.objectStore("files");
+
+  store.clear();
+
+  tx.oncomplete = function() {
+    loadFiles();
+  };
+}
+</script>
+
+</body>
+</html>

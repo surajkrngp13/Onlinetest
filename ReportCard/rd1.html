@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>SVG Dashboard with Data Tooltips</title>
+
+<style>
+.label{font-size:12px;fill:#000}
+.axis{stroke:#000;stroke-width:2}
+.grid{stroke:#ddd;stroke-width:1}
+
+.title{font-size:14px;font-weight:bold}
+
+#tooltip{
+position:absolute;
+background:#000;
+color:#fff;
+padding:6px 10px;
+font-size:12px;
+border-radius:5px;
+display:none;
+pointer-events:none;
+z-index:1000;
+}
+</style>
+</head>
+
+<body>
+<div width="900" height="1800">  <svg id="svg" width="900" height="1800"></svg>
+<div id="tooltip"></div>
+ </div>
+
+
+<script>
+
+const data=[
+["Math",50,45,35,120,80,100,70],
+["Science",40,38,30,100,70,80,60],
+["English",45,40,25,90,60,90,50],
+["History",30,28,20,80,50,70,45],
+["Computer",60,55,50,140,110,120,100]
+];
+
+const svg=document.getElementById("svg");
+const tooltip=document.getElementById("tooltip");
+
+// Enhanced tooltip function that shows the actual value
+function tip(el, valueText){
+    el.onmousemove=e=>{
+        tooltip.style.display="block";
+        tooltip.style.left=e.pageX+15+"px";
+        tooltip.style.top=e.pageY-25+"px";
+        tooltip.innerHTML=valueText;
+    };
+    el.onmouseleave=()=>tooltip.style.display="none";
+}
+
+//////////////////////////////////////////////////////
+// AXIS + GRID SYSTEM
+//////////////////////////////////////////////////////
+function drawGrid(svg,x,y,w,h,steps=5){
+for(let i=0;i<=steps;i++){
+
+let gy=y+(h*i/steps);
+
+// horizontal grid
+let g=document.createElementNS("http://www.w3.org/2000/svg","line");
+g.setAttribute("x1",x);
+g.setAttribute("x2",x+w);
+g.setAttribute("y1",gy);
+g.setAttribute("y2",gy);
+g.setAttribute("class","grid");
+svg.appendChild(g);
+
+// vertical grid
+let gx=x+(w*i/steps);
+
+let g2=document.createElementNS("http://www.w3.org/2000/svg","line");
+g2.setAttribute("x1",gx);
+g2.setAttribute("x2",gx);
+g2.setAttribute("y1",y);
+g2.setAttribute("y2",y+h);
+g2.setAttribute("class","grid");
+svg.appendChild(g2);
+}
+}
+
+function axes(svg,x,y,w,h){
+let xAxis=document.createElementNS("http://www.w3.org/2000/svg","line");
+xAxis.setAttribute("x1",x);
+xAxis.setAttribute("y1",y+h);
+xAxis.setAttribute("x2",x+w);
+xAxis.setAttribute("y2",y+h);
+xAxis.setAttribute("class","axis");
+svg.appendChild(xAxis);
+
+let yAxis=document.createElementNS("http://www.w3.org/2000/svg","line");
+yAxis.setAttribute("x1",x);
+yAxis.setAttribute("y1",y);
+yAxis.setAttribute("x2",x);
+yAxis.setAttribute("y2",y+h);
+yAxis.setAttribute("class","axis");
+svg.appendChild(yAxis);
+}
+
+function title(svg,text,x,y){
+let t=document.createElementNS("http://www.w3.org/2000/svg","text");
+t.setAttribute("x",x);
+t.setAttribute("y",y);
+t.setAttribute("class","title");
+t.textContent=text;
+svg.appendChild(t);
+}
+
+//////////////////////////////////////////////////////
+// MASTER RENDER
+//////////////////////////////////////////////////////
+function render(svg,data){
+
+let W=800,H=320,P=60;
+let gap=380;
+let offset=0;
+
+//////////////////////////
+// CHART 1: Performance vs Time (Dual direction bars)
+//////////////////////////
+(()=>{
+let x=60,y=offset+60;
+
+axes(svg,x,y,W,H);
+drawGrid(svg,x,y,W,H,5);
+title(svg,"Performance vs Time",x,y-10);
+
+let mid=y+H/2;
+let center=document.createElementNS("http://www.w3.org/2000/svg","line");
+center.setAttribute("x1",x);
+center.setAttribute("x2",x+W);
+center.setAttribute("y1",mid);
+center.setAttribute("y2",mid);
+center.setAttribute("stroke","#000");
+svg.appendChild(center);
+
+let maxQ=Math.max(...data.map(d=>d[1]));   // Quiz 1 max
+let maxT=Math.max(...data.map(d=>d[4]));   // Time Spent max
+
+data.forEach((d,i)=>{
+let bx=x+60+i*80;
+
+// top bars (positive values above center)
+let h1=(d[1]/maxQ)*(H/2-P);      // Quiz 1
+let h2=(d[3]/maxQ)*(H/2-P);   
+let h22=(d[3]/maxQ)*(H/2-P-11);   
+
+// bottom bars (negative direction from center)
+let h3=(d[4]/maxT)*(H/2-P);      // Time Spent (homework)
+let h4=(d[5]/maxT)*(H/2-P);      // Time Spent (study)
+
+// Bar 1: Quiz 1 (light gray)
+let r1=document.createElementNS("http://www.w3.org/2000/svg","rect");
+r1.setAttribute("x",bx);
+r1.setAttribute("y",mid-h1);
+r1.setAttribute("width",14);
+r1.setAttribute("height",h1);
+r1.setAttribute("fill","#bbb");
+svg.appendChild(r1);
+tip(r1, `📊 ${d[0]} - Quiz 1 Score: ${d[1]}`);
+
+// Bar 2: Quiz 2 (green)
+let r2=document.createElementNS("http://www.w3.org/2000/svg","rect");
+r2.setAttribute("x",bx);
+r2.setAttribute("y",mid-h2);
+r2.setAttribute("width",14);
+r2.setAttribute("height",h2);
+r2.setAttribute("fill","#4caf50");
+svg.appendChild(r2);
+tip(r2, `✅ ${d[0]} - Quiz 2 Score: ${d[3]}`);
+
+
+// Bar 2: Quiz 2 (green)
+let r22=document.createElementNS("http://www.w3.org/2000/svg","rect");
+r22.setAttribute("x",bx);
+r22.setAttribute("y",mid-h2);
+r22.setAttribute("width",14);
+r22.setAttribute("height",h2);
+r22.setAttribute("fill","#2196f3");
+svg.appendChild(r22);
+tip(r22, `✅ ${d[0]} - Quiz 22 Score: ${d[3]}`);
+
+// Bar 3: Homework Time (light gray bottom)
+let r3=document.createElementNS("http://www.w3.org/2000/svg","rect");
+r3.setAttribute("x",bx);
+r3.setAttribute("y",mid);
+r3.setAttribute("width",14);
+r3.setAttribute("height",h3);
+r3.setAttribute("fill","#ddd");
+svg.appendChild(r3);
+tip(r3, `⏱️ ${d[0]} - Homework Time: ${d[4]} min`);
+
+// Bar 4: Study Time (blue bottom)
+let r4=document.createElementNS("http://www.w3.org/2000/svg","rect");
+r4.setAttribute("x",bx);
+r4.setAttribute("y",mid);
+r4.setAttribute("width",14);
+r4.setAttribute("height",h4);
+r4.setAttribute("fill","#2196f3");
+svg.appendChild(r4);
+tip(r4, `📚 ${d[0]} - Study Time: ${d[5]} min`);
+
+// Subject label
+let t=document.createElementNS("http://www.w3.org/2000/svg","text");
+t.setAttribute("x",bx+7);
+t.setAttribute("y",y+H+20);
+t.setAttribute("text-anchor","middle");
+t.setAttribute("class","label");
+t.textContent=d[0];
+svg.appendChild(t);
+});
+
+offset+=gap;
+})();
+
+//////////////////////////
+// CHART 2: Subject Marks (Exam & Project)
+//////////////////////////
+(()=>{
+let x=60,y=offset+60;
+
+axes(svg,x,y,W,H);
+drawGrid(svg,x,y,W,H,5);
+title(svg,"Subject Marks: Exam vs Project",x,y-10);
+
+let max=Math.max(...data.map(d=>d[6]));  // Exam max
+
+data.forEach((d,i)=>{
+let bx=x+60+i*80;
+
+let h1=(d[6]/max)*H;   // Exam bar
+let h2=(d[7]/max)*H;   // Project bar
+
+let r1=document.createElementNS("http://www.w3.org/2000/svg","rect");
+r1.setAttribute("x",bx);
+r1.setAttribute("y",y+H-h1);
+r1.setAttribute("width",16);
+r1.setAttribute("height",h1);
+r1.setAttribute("fill","#ccc");
+svg.appendChild(r1);
+tip(r1, `📝 ${d[0]} - Exam Score: ${d[6]}`);
+
+let r2=document.createElementNS("http://www.w3.org/2000/svg","rect");
+r2.setAttribute("x",bx);
+r2.setAttribute("y",y+H-h2);
+r2.setAttribute("width",16);
+r2.setAttribute("height",h2);
+r2.setAttribute("fill","#ff9800");
+svg.appendChild(r2);
+tip(r2, `🎯 ${d[0]} - Project Score: ${d[7]}`);
+
+// Subject label
+let t=document.createElementNS("http://www.w3.org/2000/svg","text");
+t.setAttribute("x",bx+8);
+t.setAttribute("y",y+H+20);
+t.setAttribute("text-anchor","middle");
+t.setAttribute("class","label");
+t.textContent=d[0];
+svg.appendChild(t);
+});
+
+offset+=gap;
+})();
+
+//////////////////////////
+// CHART 3: Time Analysis (Homework vs Study)
+//////////////////////////
+(()=>{
+let x=60,y=offset+60;
+
+axes(svg,x,y,W,H);
+drawGrid(svg,x,y,W,H,5);
+title(svg,"Time Analysis: Homework vs Self-Study",x,y-10);
+
+let max=Math.max(...data.map(d=>Math.max(d[4], d[5])));  // max time
+
+data.forEach((d,i)=>{
+let bx=x+60+i*80;
+
+let h1=(d[4]/max)*H;   // Homework time
+let h2=(d[5]/max)*H;   // Study time
+
+let r1=document.createElementNS("http://www.w3.org/2000/svg","rect");
+r1.setAttribute("x",bx);
+r1.setAttribute("y",y+H-h1);
+r1.setAttribute("width",16);
+r1.setAttribute("height",h1);
+r1.setAttribute("fill","#ddd");
+svg.appendChild(r1);
+tip(r1, `📖 ${d[0]} - Homework Time: ${d[4]} minutes`);
+
+let r2=document.createElementNS("http://www.w3.org/2000/svg","rect");
+r2.setAttribute("x",bx);
+r2.setAttribute("y",y+H-h2);
+r2.setAttribute("width",16);
+r2.setAttribute("height",h2);
+r2.setAttribute("fill","#2196f3");
+svg.appendChild(r2);
+tip(r2, `🧠 ${d[0]} - Self-Study Time: ${d[5]} minutes`);
+
+let t=document.createElementNS("http://www.w3.org/2000/svg","text");
+t.setAttribute("x",bx+8);
+t.setAttribute("y",y+H+20);
+t.setAttribute("text-anchor","middle");
+t.setAttribute("class","label");
+t.textContent=d[0];
+svg.appendChild(t);
+});
+
+offset+=gap;
+})();
+
+//////////////////////////
+// CHART 4: Performance Efficiency (Project/Study & Exam/Quiz)
+//////////////////////////
+(()=>{
+let x=60,y=offset+60;
+
+axes(svg,x,y,W,H);
+drawGrid(svg,x,y,W,H,5);
+title(svg,"Performance Efficiency Metrics",x,y-10);
+
+// Efficiency formulas: 
+// Efficiency1 = Project Score / (Study Time * Attendance)  -> d[7]/(d[2]*d[5])
+// Efficiency2 = Exam Score / (Quiz1 * Homework Time)      -> d[6]/(d[1]*d[4])
+let perf=data.map(d=>{
+let effProject = d[2] > 0 && d[5] > 0 ? d[7] / (d[2] * d[5]) : 0;
+let effExam = d[1] > 0 && d[4] > 0 ? d[6] / (d[1] * d[4]) : 0;
+return [d[0], effProject, effExam];
+});
+
+let max=Math.max(...perf.map(d=>Math.max(d[1], d[2])));
+
+perf.forEach((d,i)=>{
+let bx=x+60+i*80;
+
+let h1=(d[2]/max)*H;   // Exam Efficiency
+let h2=(d[1]/max)*H;   // Project Efficiency
+
+let r1=document.createElementNS("http://www.w3.org/2000/svg","rect");
+r1.setAttribute("x",bx);
+r1.setAttribute("y",y+H-h1);
+r1.setAttribute("width",16);
+r1.setAttribute("height",h1);
+r1.setAttribute("fill","#bbb");
+svg.appendChild(r1);
+tip(r1, `📈 ${d[0]} - Exam Efficiency: ${d[2].toFixed(3)} (Score/(Quiz×Homework))`);
+
+let r2=document.createElementNS("http://www.w3.org/2000/svg","rect");
+r2.setAttribute("x",bx);
+r2.setAttribute("y",y+H-h2);
+r2.setAttribute("width",16);
+r2.setAttribute("height",h2);
+r2.setAttribute("fill","#e91e63");
+svg.appendChild(r2);
+tip(r2, `⚡ ${d[0]} - Project Efficiency: ${d[1].toFixed(3)} (Project/(Attend×Study))`);
+
+let t=document.createElementNS("http://www.w3.org/2000/svg","text");
+t.setAttribute("x",bx+8);
+t.setAttribute("y",y+H+20);
+t.setAttribute("text-anchor","middle");
+t.setAttribute("class","label");
+t.textContent=d[0];
+svg.appendChild(t);
+});
+
+})();
+
+}
+
+render(svg,data);
+
+</script>
+
+</body>
+</html>
