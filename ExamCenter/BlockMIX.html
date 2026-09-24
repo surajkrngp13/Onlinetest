@@ -1,0 +1,1012 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>TCS Foundation | Smart Timer</title>
+   
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+
+html{font-size:clamp(14px,.5vw,18px)}
+
+body{
+min-height:100dvh;
+background:#e2e8f0;
+font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+color:#0f2b35;
+transition:.3s;
+overflow-y:auto
+}
+
+/* overlay scroll safe */
+.preference-overlay{
+position:fixed;
+inset:0;
+background:linear-gradient(135deg,#0a2f3c 0%,#124c5e 100%);
+display:flex;
+align-items:center;
+justify-content:center;
+z-index:2000;
+overflow-y:auto;
+padding:20px
+}
+
+/* card responsive */
+.preference-card{
+background:#fff;
+border-radius:32px;
+padding:24px;
+max-width:500px;
+width:100%;
+box-shadow:0 25px 50px -12px rgba(0,0,0,.5);
+text-align:center;
+max-height:90dvh;
+overflow-y:auto
+}
+
+.preference-card h2{
+color:#0a2f3c;
+margin-bottom:16px
+}
+
+.pref-group{
+margin:16px 0;
+text-align:left
+}
+
+.pref-group label{
+display:block;
+font-weight:600;
+margin-bottom:6px
+}
+
+.pref-group select,
+.pref-group input{
+margin-top:4px;
+padding:8px;
+border-radius:12px;
+border:1px solid #cbd5e1;
+width:100%
+}
+
+.pref-group.checkbox-group{
+display:flex;
+gap:20px;
+align-items:center;
+justify-content:center
+}
+
+.pref-group.checkbox-group label{
+display:inline-flex;
+align-items:center;
+gap:6px;
+font-weight:400;
+margin:0;
+cursor:pointer
+}
+
+.pref-toggle{
+display:flex;
+justify-content:space-between;
+align-items:center;
+background:#f7fafc;
+padding:12px 20px;
+border-radius:60px;
+margin:12px 0
+}
+
+.pref-toggle label{
+font-weight:600;
+cursor:pointer
+}
+
+.pref-toggle input{
+width:20px;
+height:20px;
+accent-color:#e67e22;
+cursor:pointer
+}
+
+/* 🔥 fixed button (always visible) */
+.start-exam-btn{
+position:sticky;
+bottom:0;
+background:#e67e22;
+color:#fff;
+border:none;
+padding:12px 32px;
+border-radius:40px;
+font-weight:700;
+font-size:1rem;
+cursor:pointer;
+margin-top:20px;
+width:100%
+}
+
+.start-exam-btn:hover{
+background:#c45f0a
+}
+
+/* landscape fix */
+@media (orientation:landscape){
+.preference-card{
+max-height:85dvh;
+padding:16px
+}
+
+.start-exam-btn{
+padding:10px;
+font-size:.9rem
+}
+}
+</style>
+
+</head>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<body>
+    <!-- Preference Overlay -->
+    <div class="preference-overlay" id="preferenceOverlay"> 
+        <div class="preference-card">
+           <span>📘 Exam Preferences</span><span> <div id="google_translate_element1"></div><button onclick="clearAllCache()">🧹 Clear Cache</button><button onclick="fullClear()">🧹 fullClear</button> </span>
+        <div class="pref-group">
+            <label>🌐 Default Language</label>
+            <select id="prefLanguage"  onchange="changeLang(this.value)">
+                <option value="">Select Language</option>
+                <option value="hi">Hindi</option>
+                <option value="bn">Bengali</option>
+                <option value="ta">Tamil</option>  
+                <option value="te">Telugu</option>
+                <option value="ml">Malayalam</option>
+                <option value="gu">Gujarati</option>
+                <option value="mr">Marathi</option>
+                <option value="pa">Punjabi</option>
+                <option value="ur">Urdu</option>
+            </select>
+        </div>
+            <h2>📋 Exam Preferences & Instructions</h2>
+            <p>Welcome to TCS Foundation Assessment. Set your preferences before starting.</p>
+           
+            <div class="pref-toggle">
+                <label>💡 Show Answer on Select</label>
+                <input type="checkbox" id="prefShowAnswer" checked>
+            </div>
+            <div class="pref-group checkbox-group">
+            <p>Select question showing type----</p>
+           <label><input type="radio" name="QStype" value="1by1" checked>Onebyone</label>
+           <label><input type="radio" name="QStype" value="all">All</label>
+           </div>
+            <div class="pref-toggle">
+                <label>⏱️ Timer On/Off</label>
+                <input type="checkbox" id="prefTimerToggle" checked>
+            </div>
+            <p style="margin-top: 24px; font-size: 0.85rem;">
+                ⚡ Timer starts when the question becomes visible (last portion in view).<br>
+                🔒 Once you select an answer, the timer stops permanently and options are locked.<br>
+                📜 Scroll to see all questions; answers cannot be changed after selection.
+            </p>
+            <button class="start-exam-btn" id="startExamBtn" disabled>Start Exam</button>
+        </div>
+    </div>
+   
+    <div id="QF"> </div>
+    <div id="paidplease"></div>
+
+    <div id="signin" style="display:none;"><div style="background:#fff; padding:40px 30px; border-radius:16px; text-align:center; box-shadow:0 15px 30px rgba(0,0,0,0.2); width:280px;">
+    <h2 style="margin-bottom:20px; color:#333;">Welcome</h2>
+    <p style="margin-bottom:25px; color:#777; font-size:14px;">  Continue to sign in to your account</p>
+    <a href="https://example.com/signin" style="display:inline-block; padding:12px 25px; background:linear-gradient(135deg,#667eea,#764ba2); color:#fff; text-decoration:none; border-radius:8px; font-weight:bold; box-shadow:0 5px 15px rgba(0,0,0,0.2);">
+        Sign In</a></div></div>
+
+     
+      <script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+     
+        <!-- src="data.js"
+   
+      <script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+<option value="en">English</option>
+
+
+-->
+
+
+
+
+
+
+
+
+
+   <script type="module">
+    import brotliWasm from 'https://cdn.jsdelivr.net/npm/brotli-wasm@3.0.1/index.web.js'
+       import { 
+    auth,rtdb
+  } from '/service worker/firebase.js';
+       const brotli = await brotliWasm;
+      const encoded = sessionStorage.getItem("SOURCES");
+
+
+
+
+  let SOURCES = [];
+if (encoded) {
+   SOURCES = JSON.parse(decodeURIComponent(atob(encoded)))
+  console.log(SOURCES)
+
+}
+
+
+
+  let starttime=0;
+  let stoptime=0;
+  
+let index = JSON.parse(sessionStorage.getItem("index"));
+let courseid = sessionStorage.getItem("courseid");
+console.log(courseid);
+console.log(index);
+let bb=[];
+if(index){
+ bb = Object.entries(index.firestore || {}).map(([k, v]) => [k, ...Object.values(v)]);
+
+}
+console.log(bb)
+
+//let courseid = "BR_bssc_inter";
+let paid = "false";
+
+let all=[];
+let data = index.firestore?.[courseid];
+
+if (data) {
+  console.log("you are paid");
+  paid = "true";
+  all=Object.values(data.subject || {});
+}
+
+console.log(data);
+console.log(paid);
+console.log(all)
+
+let result = [].concat(...all.map(item => item.split("\n")));
+console.log(result);
+let result2d = result.map(line => line.split("|"));
+
+console.log(result2d);
+
+
+
+function replacepassword(x){
+const pass = x =>
+  (result2d.find(item => item[0] === x)?.[1]) || "";
+return pass;
+}
+
+
+ let arr1 = [];
+  let arr2 = [];
+let tran='false';
+SOURCES.forEach(item => {
+  let xx=item.url.split("/").pop();
+  item.fn = xx;
+  let xxx=xx.split("_");
+ 
+  if(xxx[0]==="P"){  let pass=replacepassword(xxx[0]);  item.PT = pass;  
+  console.log("P pass changed")
+  }else if(xxx[0]==="T"){  let pass=replacepassword(xxx[0]);  item.PT = pass;  
+    tran="true";
+  console.log("T pass changed")
+  }else{item.PT = xxx[0]; }
+   arr1.push(xxx[0]);
+    arr2.push(xxx[1]);
+  item.label = xxx[4];
+  item.QT = xxx[1];
+});
+
+
+console.log(SOURCES);
+
+let rankOrder1 = ["T", "p", "en", "f"];
+let rankOrder2 = ["SWTL","SW","MIX"];
+function getBest(arr,ro) {
+  let best = null;
+  let bestIndex = Infinity;
+
+  arr.forEach(val => {
+    let index = ro.indexOf(val);
+    if (index !== -1 && index < bestIndex) {
+      bestIndex = index;
+      best = val;
+    }
+  });
+
+  return best;
+}
+let databest = getBest(arr1,rankOrder1);
+
+let Questionway = getBest(arr2,rankOrder2);
+console.log(Questionway);
+
+
+
+
+
+let clientstatus = "";
+
+
+ const user = auth.currentUser;
+
+function checktran(){
+
+
+
+}
+
+if (user) {
+  if (tran==="true") {
+    clientstatus = "T";
+  } else if (checkPaid) {
+   // password replace need
+   // replacepassword();
+    clientstatus = "P";
+  } else {
+    clientstatus = "EN";
+  }
+} else {
+  clientstatus = "f";
+}
+
+
+
+
+
+clientstatus="T";
+
+
+
+
+// try{let d=;d?u():(sessionStorage.setItem("redirectAfterLogin",location.href),location='/signinplease.html')}catch(e){location='/signinplease.html'}
+
+
+
+// let signin=JSON.parse(sessionStorage.getItem("user"));
+// let paid="yes";
+
+
+
+const PBKDF2_ITERATIONS = 250000;
+function checksignin(){
+                  return "yes"; }
+
+function checkpaid(){
+                    return "yes"; }
+
+
+
+
+
+
+async function deriveKey(password,salt){
+const enc=new TextEncoder();
+const keyMaterial=await crypto.subtle.importKey('raw',enc.encode(password),'PBKDF2',false,['deriveKey']);
+return crypto.subtle.deriveKey(
+{name:'PBKDF2',salt,iterations:PBKDF2_ITERATIONS,hash:'SHA-256'},
+keyMaterial,
+{name:'AES-GCM',length:256},
+false,
+['decrypt']
+);
+}
+
+function decompressChunked(data,brotli){
+const view=new DataView(data.buffer);
+let offset=0,chunks=[];
+while(offset<data.length){
+let len=view.getUint32(offset,true);
+offset+=4;
+let chunk=data.slice(offset,offset+len);
+chunks.push(brotli.decompress(chunk));
+offset+=len;
+}
+let total=chunks.reduce((a,b)=>a+b.length,0);
+let result=new Uint8Array(total),pos=0;
+for(let c of chunks){result.set(c,pos);pos+=c.length}
+return result;
+}
+
+
+
+async function processSource(src,brotli){
+  console.log("kk")
+const res=await fetch(src.url);
+if (!res.ok) throw new Error("Fetch failed: " + src.url);
+const buffer=await res.arrayBuffer();
+const data=new Uint8Array(buffer);
+console.log(buffer)
+
+let pos=6;
+let metaLen=new DataView(buffer,pos,2).getUint16(0,true);
+pos+=2+metaLen;
+
+const salt=data.slice(pos,pos+16);pos+=16;
+const iv=data.slice(pos,pos+12);pos+=12;
+const cipher=data.slice(pos);
+
+const key=await deriveKey(src.password,salt);
+let decrypted;
+try {
+    decrypted = await crypto.subtle.decrypt({name:'AES-GCM',iv},key,cipher);
+} catch(e){
+    console.error("Decrypt failed", src.label);
+    return "";
+}
+
+const decompressed=decompressChunked(new Uint8Array(decrypted),brotli);
+return {x: new TextDecoder().decode(decompressed),y: data};
+}
+
+
+
+
+function parseQuestions(text,label){
+const lines=text.split("\n").map(l=>l.trim()).filter(l=>l);
+let xxx = [];
+
+  for (const line of lines) {
+        let parts = line.split("¦");
+                xxx.push(parts);
+            }
+ return xxx;
+}
+
+
+let db;
+
+
+
+function initDB() {
+  return new Promise((resolve, reject) => {
+    console.log("Opening DB...");
+
+    const req = indexedDB.open("filesDB", 2);
+
+    req.onupgradeneeded = e => {
+      console.log("onupgradeneeded triggered");
+
+      db = e.target.result;
+
+      if (!db.objectStoreNames.contains("files")) {
+        console.log("Creating objectStore: files");
+        db.createObjectStore("files", { keyPath: "name" });
+      } else {
+        console.log("objectStore already exists");
+      }
+    };
+
+  req.onsuccess = e => {
+  db = e.target.result;
+
+  // 🔥 IMPORTANT CHECK
+  const tx = db.transaction("files", "readonly");
+  const store = tx.objectStore("files");
+
+  if (!store.keyPath) {
+    console.error("❌ WRONG STORE STRUCTURE (no keyPath)");
+
+    // force reset
+    db.close();
+    indexedDB.deleteDatabase("filesDB");
+
+    location.reload(); // reload page
+    return;
+  }
+    const allReq = store.getAll();
+  allReq.onsuccess = ev => {
+    console.log("📦 DB INIT DATA:", ev.target.result);
+  };
+  console.log("DB opened successfully");
+  resolve(db);
+};
+
+    req.onerror = e => {
+      console.error("DB OPEN ERROR:", e.target.error);
+      reject(e);
+    };
+
+    req.onblocked = () => {
+      console.warn("DB BLOCKED (close other tabs using this DB)");
+    };
+  });
+}
+async function getFile(folder, name) {
+  name = name.trim();
+
+  console.log("getFile called:", folder, name);
+
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction("files", "readonly");
+    const store = tx.objectStore("files");
+
+    const req = store.getAll();
+
+    req.onsuccess = () => {
+      const list = req.result;
+
+      const found = list.find(f => f.name === name);
+
+      if (!found) {
+        console.warn("❌ File not found:", name);
+        resolve(null);
+        return;
+      }
+
+      if (found.folder !== folder) {
+        console.warn("❌ Folder mismatch");
+        resolve(null);
+        return;
+      }
+
+      console.log("✅ File found:", found.name);
+      resolve(found);
+    };
+
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function savefileinindexd(data, name) {
+  if (!data) {
+    alert("data not found");
+    return;
+  }
+
+  name = name ? name.trim() : "";
+  if (!name) {
+    alert("Invalid file name");
+    return;
+  }
+
+  const tx = db.transaction("files", "readwrite");
+  const store = tx.objectStore("files");
+
+  const fileObj = {
+    folder: "data",
+    name: name,
+    data: data,
+    encrypted: true
+  };
+
+  const req = store.put(fileObj);
+
+  req.onsuccess = function () {
+    console.log("Saved:", "data/" + name);
+  };
+
+  req.onerror = function (e) {
+    console.log("PUT ERROR", e);
+  };
+}
+
+async function process(data,pass) {
+
+  const buffer = data.buffer;  // ✅ FIX
+
+  let pos = 6;
+  let metaLen = new DataView(buffer, pos, 2).getUint16(0, true);
+  pos += 2 + metaLen;
+
+  const salt = data.slice(pos, pos + 16); pos += 16;
+  const iv = data.slice(pos, pos + 12); pos += 12;
+  const cipher = data.slice(pos);
+
+  const key = await deriveKey(pass, salt);
+
+  let decrypted;
+  try {
+    decrypted = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, cipher);
+  } catch (e) {
+    console.error("Decrypt failed");
+    return "";
+  }
+
+  const decompressed = decompressChunked(new Uint8Array(decrypted), brotli);
+
+  return new TextDecoder().decode(decompressed);
+}
+async function loadAllSourcesOrdered(brotli) {
+   await initDB();
+
+  const results = [];
+  let  yyy='';
+  for (let i = 0; i < SOURCES.length; i++) {
+    const src = SOURCES[i];
+ console.log(src.fn)
+    try {
+      let file = await getFile("data", src.fn);
+     console.log(file)
+      let text;
+
+     if (file) {
+      text = await process(file.data, src.password);
+        results.push([src.label, parseQuestions(text, src.fn)]);
+     } else {
+  
+    yyy = await processSource(src, brotli);
+      console.log("TYPE:", typeof yyy['x'], yyy['x']);
+     await savefileinindexd(yyy["y"], src.fn);
+ results.push([src.label, parseQuestions(yyy["x"], src.fn)]);
+      }
+     
+     
+
+    } catch (e) {
+      console.error(e);
+      results.push([src.fn, []]);
+    }
+  }
+
+  return results;
+}
+
+
+
+   // ---------- MAIN: EXECUTE, LOG 2D ARRAY TO CONSOLE, NO HTML RENDERING ----------
+     
+  
+
+
+async function start() {
+  const orderedGroups = await loadAllSourcesOrdered(brotli);
+  normal(orderedGroups,Questionway);
+
+}
+
+
+
+if (rankOrder1.indexOf(clientstatus) <= rankOrder1.indexOf(databest)) {
+ start();
+ document.getElementById('startExamBtn').disabled=false
+} else {
+  console.log("client has not data acess"+clientstatus+"  "+databest);
+}
+
+
+
+
+
+// for scrpit 1
+document.addEventListener("click", (e) => {
+    console.log("hhhjj")
+    if (e.target && e.target.id === "submitExamBtn1") {
+        if (!examSubmitted1) {
+            examSubmitted1 = true;
+            stopQuestionTimerAndSave();
+            stopTotalTimer();
+            showResultsSummary();
+        }
+    }
+
+    if (e.target && e.target.id === "viewDetailedBtn") {
+        showDetailedAnswers();
+    }
+
+ if (e.target && e.target.id === "submitExamBtn2") {
+
+        if (!examSubmitted2) {
+            examSubmitted2 = true
+
+            stopTotalTimer()
+            worker2.postMessage({ type: 'stopAll' })
+
+            showResults()
+        }
+    }
+
+   if (e.target && e.target.id === "profileIcon") {
+
+        let ans = userAnswers2 ? userAnswers2.filter(a => a !== null).length : 0
+        let total = Object.values(questionElapsedCache).reduce((a, b) => a + b, 0)
+
+        alert(
+            `👤 Profile\n✅ Answered: ${ans}/${totalQuestions2}\n⏱️ Spent: ${formatSeconds(total)}\n⏱️ Remaining: ${formatTime(totalSeconds2)}`
+        )
+    }
+    console.log("hhh533333355jj")
+   if (e.target && e.target.id === "startExamBtn") {
+         console.log("hhh555jj")
+        const showAnswer = document.getElementById('prefShowAnswer')?.checked
+        const prefLang = document.getElementById("prefLanguage")?.value
+        const timerEnabled = document.getElementById('prefTimerToggle')?.checked
+
+        const xxx = document.querySelector('input[name="QStype"]:checked')
+
+        document.getElementById('preferenceOverlay').style.display = 'none'
+
+      if ( xxx.value==="1by1") { 
+                    console.log("ff");
+                    ab(showAnswer,prefLang,timerEnabled);
+                    } else if ( xxx.value==="all") {  
+
+console.log("ffh");
+
+                     bc(showAnswer,prefLang,timerEnabled); 
+                      
+                      
+                      } else {       document.getElementById("preferenceOverlay").innerHTML = "<p>error templet.....</p>";  }
+
+        
+
+
+
+
+    }
+
+
+
+
+});
+
+
+
+
+
+
+
+
+
+</script>
+<script>
+
+let exam2D=[];
+
+let signin="yes";
+let paid="yes";
+
+
+
+
+
+
+
+function shuffleRows(arr) {
+  let result = [...arr];
+
+  for (let i = result.length - 1; i > 0; i--) {
+    let j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+
+  return result;
+}
+
+let tab="false"
+let autoTabMode = false;
+
+
+function normal(orderedData,Questionway){    
+
+   
+        console.log(orderedData)
+  const twoDArray = [];
+ for (let i = 0; i < orderedData.length; i++) {
+    let xx=orderedData[i][1]
+    for (let j = 0; j <200 ; j++) { 
+      let uu=xx[j][0].split("-");  
+     let add = [
+  uu[0], ...xx[j].slice(1), ...uu.slice(1)
+]
+      twoDArray.push(add);
+}  }
+
+
+
+
+
+
+if(Questionway==="SWTL"){
+  tab="true";
+   autoTabMode = true
+  twoDArray.sort((a, b) => a[0].localeCompare(b[0]));
+  console.log("SWTL", twoDArray); 
+   exam2D = twoDArray;
+}else if (Questionway==="SW") {
+   tab="true";
+ twoDArray.sort((a, b) => a[0].localeCompare(b[0]));
+  console.log("SW", twoDArray); 
+   exam2D = twoDArray;
+}else if (Questionway==="MIX") {
+  
+exam2D = shuffleRows(twoDArray);
+
+}else{
+  exam2D = twoDArray;
+  }
+ 
+
+    console.log( exam2D) 
+  
+
+
+
+}
+
+
+
+
+function sleep(ms){
+  return new Promise(r => setTimeout(r, ms))
+}
+
+async function waitForArray(){
+  while(!exam2D || exam2D.length === 0){
+    console.log("Waiting for array...")
+    await new Promise(r => setTimeout(r, 5000))
+  }
+
+  console.log("Array ready:", exam2D)
+}
+
+
+waitForArray();
+
+
+
+
+async function clearAllCache(){
+let keys=await caches.keys()
+await Promise.all(keys.map(k=>caches.delete(k)))
+alert("All cache cleared ✅")
+}
+
+async function fullClear(){
+await caches.keys().then(k=>k.map(caches.delete))
+localStorage.clear()
+sessionStorage.clear()
+alert("All data cleared 🚀")
+}
+
+
+
+function registerServiceWorker(swPath, callback){
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register(swPath)
+      .then(() => navigator.serviceWorker.ready)
+      .then(() => {
+        console.log("Service Worker ready ✅");
+        callback(true);
+      })
+      .catch(err => {
+        console.log("SW error:", err);
+        callback(false);
+      });
+  } else {
+    callback(false);
+  }
+}
+
+function loadScript(src, callback){
+  const script = document.createElement("script");
+  script.src = src;
+  script.onload = () => {
+    console.log("Script loaded ✅");
+    callback(true);
+  };
+  script.onerror = () => {
+    console.log("Script failed ❌");
+    callback(false);
+  };
+  document.body.appendChild(script);
+}    
+
+ registerServiceWorker("/service-worker.js", function(swSuccess){
+  if(swSuccess){
+
+  
+
+  }
+});   
+function loadScriptttt1(src, callback) {
+  const script = document.createElement("script");
+  script.src = src;
+  script.onload = callback;
+   script.onerror = () => callback(false);
+  document.body.appendChild(script);
+}
+
+
+function googleTranslateElementInit() {
+    new google.translate.TranslateElement({
+        pageLanguage: 'en',
+        includedLanguages: 'hi,bn,ta,te,ml,gu,mr,pa,ur',
+        layout: google.translate.TranslateElement.InlineLayout.SIMPLE
+    }, 'google_translate_element1');
+}
+
+
+
+
+
+
+function mainactivity(){
+ 
+            const startBtn = document.getElementById('startExamBtn');
+            startBtn.disabled=false
+            if (startBtn) {
+                startBtn.addEventListener('click', function() {
+                  
+                    const showAnswer = document.getElementById('prefShowAnswer').checked;
+                    const prefLang = document.getElementById("prefLanguage").value;
+                    const timerEnabled = document.getElementById('prefTimerToggle').checked;
+                    let xxx = document.querySelector('input[name="QStype"]:checked');
+                     document.getElementById('preferenceOverlay').style.display = 'none';
+                 
+                    if ( xxx.value==="1by1") { // loadScriptw("/script1.js") 
+//loadScript("script1.js",function () {console.log("Script loaded successfully");
+  loadScript("/script/script1.js", function(scriptSuccess){
+      if(scriptSuccess){
+        console.log("Both loaded successfully 🚀");
+      }
+  if (typeof onebyone === "function") { onebyone(showAnswer, timerEnabled, prefLang);   } else {   console.log("Function not found 1by1"); }   });             
+                      console.log("oby1 console"); } else if ( xxx.value==="all") {  
+                  loadScript("/script/script2.js", function () {
+  console.log("Script loaded successfully");
+  if (typeof all === "function") { all(showAnswer, timerEnabled, prefLang); } else {  console.log("Function not found all");  }  });
+                        console.log("all console"); } else {       document.getElementById("preferenceOverlay").innerHTML = "<p>error templet.....</p>";  }
+                
+                
+                
+                
+                      });
+            }
+      
+}
+
+
+
+
+
+
+ 
+      if (signin=="yes"){       
+          if (paid=="yes"){   //mainactivity(); 
+           }else{ 
+        
+              document.getElementById('preferenceOverlay').style.display = 'none';
+              document.getElementById('paidplease').style.display = 'flex';  
+            }
+      }else{ document.getElementById('preferenceOverlay').style.display = 'none';
+             document.getElementById('signin').style.display = 'flex';        }
+
+function ab(x,y,z){
+  // loadScriptw("/script1.js") 
+//loadScript("script1.js",function () {console.log("Script loaded successfully");
+  loadScript("/script/script1.js", function(scriptSuccess){
+      if(scriptSuccess){
+        console.log("Both loaded successfully 🚀");
+      }
+  if (typeof onebyone === "function") { onebyone(x,z, y);   } else {   console.log("Function not found 1by1"); }   });             
+                      console.log("oby1 console"); 
+                    
+
+}
+
+
+function bc(x,y,z){
+
+                  loadScript("/script/script2.js", function () {
+  console.log("Script loaded successfully");
+  if (typeof all === "function") { all(x,z, y); } else {  console.log("Function not found all");  }  });
+                        console.log("all console"); 
+                      
+
+
+}
+
+
+
+    </script>
+</body>
+</html>
