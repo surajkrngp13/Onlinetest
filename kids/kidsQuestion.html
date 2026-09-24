@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Animated Emoji Reasoning</title>
+</head>
+
+<body style="margin:0;font-family:sans-serif">
+
+<div style="padding:10px">
+
+<!-- Q1 Bounce -->
+<div style="border-bottom:1px solid #ccc;padding:20px;text-align:center">
+<div style="font-size:20vw;display:inline-block;animation:b 1s infinite">😀</div>
+<div>1. Find odd: Apple, Mango, Car, Banana</div>
+</div>
+
+<!-- Q2 Rotate -->
+<div style="border-bottom:1px solid #ccc;padding:20px;text-align:center">
+<div style="font-size:20vw;display:inline-block;animation:r 2s linear infinite">🔥</div>
+<div>2. Series: 2,4,8,16,?</div>
+</div>
+
+<!-- Q3 Pulse SVG -->
+<div style="border-bottom:1px solid #ccc;padding:20px;text-align:center">
+<svg style="width:20vw;height:20vw;animation:p 1s infinite" viewBox="0 0 100 100">
+<circle cx="50" cy="50" r="40" fill="orange"/>
+</svg>
+<div>3. Missing: 3,9,27,?</div>
+</div>
+
+<!-- Q4 Bounce -->
+<div style="border-bottom:1px solid #ccc;padding:20px;text-align:center">
+<div style="font-size:20vw;display:inline-block;animation:b 1.2s infinite">😎</div>
+<div>4. A,C,E,?</div>
+</div>
+
+<!-- Q5 Rotate -->
+<div style="border-bottom:1px solid #ccc;padding:20px;text-align:center">
+<div style="font-size:20vw;display:inline-block;animation:r 3s linear infinite">🚀</div>
+<div>5. Z,X,V,?</div>
+</div>
+
+<!-- Q6 Pulse -->
+<div style="border-bottom:1px solid #ccc;padding:20px;text-align:center">
+<div style="font-size:20vw;display:inline-block;animation:p 1s infinite">🎯</div>
+<div>6. CAT=DBU, DOG=?</div>
+</div>
+
+<!-- Q7 Bounce -->
+<div style="border-bottom:1px solid #ccc;padding:20px;text-align:center">
+<div style="font-size:20vw;display:inline-block;animation:b 1s infinite">💡</div>
+<div>7. 5:25 :: 6:?</div>
+</div>
+
+<!-- Q8 Rotate -->
+<div style="border-bottom:1px solid #ccc;padding:20px;text-align:center">
+<div style="font-size:20vw;display:inline-block;animation:r 2s linear infinite">📘</div>
+<div>8. 1,1,2,3,5,?</div>
+</div>
+
+<!-- Q9 Pulse -->
+<div style="border-bottom:1px solid #ccc;padding:20px;text-align:center">
+<div style="font-size:20vw;display:inline-block;animation:p 1s infinite">🧠</div>
+<div>9. Mirror LEFT?</div>
+</div>
+
+<!-- Q10 Bounce -->
+<div style="padding:20px;text-align:center">
+<div style="font-size:20vw;display:inline-block;animation:b 1s infinite">🔥</div>
+<div>10. 12,24,36,45 odd?</div>
+</div>
+
+</div>
+
+<style>
+@keyframes b{
+0%,100%{transform:translateY(0)}
+50%{transform:translateY(-30px)}
+}
+@keyframes r{
+0%{transform:rotate(0)}
+100%{transform:rotate(360deg)}
+}
+@keyframes p{
+0%,100%{transform:scale(1)}
+50%{transform:scale(1.2)}
+}
+</style>
+
+</body>
+</html>
