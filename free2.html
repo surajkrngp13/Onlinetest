@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Express Herald | Latest News, Breaking News, Top Headlines</title>
+  <!-- Google Fonts & Font Awesome 6 -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #ffffff;
+      color: #1f2937;
+      line-height: 1.5;
+    }
+
+    /* ===== HEADER (News-style, sticky, red accent) ===== */
+    .site-header {
+      background: #ffffff;
+      box-shadow: 0 1px 0 0 rgba(0, 0, 0, 0.05), 0 2px 8px rgba(0, 0, 0, 0.02);
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      border-bottom: 1px solid #eef2f6;
+    }
+
+    .container {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 0 2rem;
+    }
+
+    /* Top header row */
+    .top-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.9rem 0;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .logo-area {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .logo-icon {
+      background: #d32f2f;
+      width: 38px;
+      height: 38px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 1.4rem;
+    }
+    .logo-text {
+      font-size: 1.6rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: #0f172a;
+    }
+    .logo-text span {
+      color: #d32f2f;
+    }
+
+    /* DROPDOWN (top header dropdown) */
+    .dropdown {
+      position: relative;
+    }
+    .dropdown-btn {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      padding: 0.6rem 1.2rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      border-radius: 40px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
+      color: #1e293b;
+      font-family: 'Inter', sans-serif;
+    }
+    .dropdown-btn i:first-child {
+      font-size: 0.9rem;
+    }
+    .dropdown-btn i:last-child {
+      font-size: 0.7rem;
+      transition: transform 0.2s;
+    }
+    .dropdown-btn:hover {
+      background: #ecf5fc;
+      border-color: #cbd5e1;
+    }
+    .dropdown-menu {
+      position: absolute;
+      top: calc(100% + 12px);
+      left: 0;
+      min-width: 220px;
+      background: #ffffff;
+      border-radius: 20px;
+      box-shadow: 0 20px 35px -12px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.02);
+      list-style: none;
+      padding: 0.5rem 0;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(-12px);
+      transition: all 0.2s ease;
+      z-index: 200;
+    }
+    .dropdown-menu.show {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+    }
+    .dropdown-menu li a {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0.7rem 1.5rem;
+      color: #1f3a5f;
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: background 0.15s;
+    }
+    .dropdown-menu li a i {
+      width: 1.3rem;
+      color: #d32f2f;
+    }
+    .dropdown-menu li a:hover {
+      background: #fef2f2;
+      color: #b91c1c;
+    }
+
+    /* RIGHT SIDE LOGIN ICON */
+    .login-area {
+      margin-left: auto;
+    }
+    .login-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 40px;
+      padding: 0.5rem 1.2rem;
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: #1e293b;
+      text-decoration: none;
+      transition: all 0.2s ease;
+    }
+    .login-btn i {
+      font-size: 1.1rem;
+      color: #d32f2f;
+    }
+    .login-btn:hover {
+      background: #fef2f2;
+      border-color: #fecaca;
+      transform: scale(0.98);
+    }
+
+    /* Main Navigation Bar (news sections) */
+    .main-nav {
+      border-top: 1px solid #eef2f6;
+      border-bottom: 1px solid #eef2f6;
+      background: #fff;
+    }
+    .nav-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.8rem;
+      padding: 0.75rem 0;
+      list-style: none;
+    }
+    .nav-links li a {
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: #1f2937;
+      transition: color 0.2s;
+    }
+    .nav-links li a:hover {
+      color: #d32f2f;
+    }
+
+    /* Hero Section (Breaking / Lead story) */
+    .hero {
+      margin: 2rem 0 2rem;
+    }
+    .breaking-badge {
+      background: #d32f2f;
+      display: inline-block;
+      color: white;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 0.2rem 0.8rem;
+      border-radius: 30px;
+      text-transform: uppercase;
+      margin-bottom: 1rem;
+    }
+    .hero-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 2rem;
+      align-items: center;
+    }
+    .hero-content {
+      flex: 1.2;
+    }
+    .hero-content h1 {
+      font-size: 2.8rem;
+      font-weight: 800;
+      line-height: 1.2;
+      margin-bottom: 1rem;
+      color: #0f172a;
+    }
+    .hero-content p {
+      font-size: 1.1rem;
+      color: #475569;
+      margin-bottom: 1.5rem;
+    }
+    .hero-image {
+      flex: 1;
+      border-radius: 24px;
+      overflow: hidden;
+      box-shadow: 0 12px 24px -12px rgba(0, 0, 0, 0.1);
+    }
+    .hero-image img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    /* News Grid (Cards) */
+    .section-title {
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin: 2rem 0 1.5rem;
+      border-left: 5px solid #d32f2f;
+      padding-left: 1rem;
+    }
+    .news-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 2rem;
+      margin-bottom: 3rem;
+    }
+    .news-card {
+      background: #ffffff;
+      border-radius: 20px;
+      overflow: hidden;
+      transition: all 0.25s;
+      border: 1px solid #eef2f8;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+    }
+    .news-card:hover {
+      transform: translateY(-6px);
+      border-color: #f1d7d7;
+      box-shadow: 0 20px 28px -14px rgba(0, 0, 0, 0.08);
+    }
+    .news-card img {
+      width: 100%;
+      height: 180px;
+      object-fit: cover;
+    }
+    .card-content {
+      padding: 1.2rem;
+    }
+    .card-category {
+      color: #d32f2f;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      margin-bottom: 0.5rem;
+    }
+    .card-content h3 {
+      font-size: 1.2rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+    .card-content p {
+      color: #4b5563;
+      font-size: 0.9rem;
+    }
+
+    /* Sidebar & right column (for variety) */
+    .two-columns {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 2rem;
+      margin-bottom: 3rem;
+    }
+    .main-col {
+      flex: 2;
+    }
+    .sidebar {
+      flex: 1;
+      background: #fafcff;
+      border-radius: 24px;
+      padding: 1.5rem;
+      border: 1px solid #eef2f6;
+    }
+    .sidebar h3 {
+      font-size: 1.3rem;
+      margin-bottom: 1rem;
+      border-bottom: 2px solid #d32f2f;
+      display: inline-block;
+    }
+    .sidebar-list {
+      list-style: none;
+      margin-top: 1rem;
+    }
+    .sidebar-list li {
+      padding: 0.8rem 0;
+      border-bottom: 1px solid #eef2f6;
+    }
+    .sidebar-list li a {
+      text-decoration: none;
+      color: #1f2937;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+    .sidebar-list li a:hover {
+      color: #d32f2f;
+    }
+
+    /* Footer */
+    .footer {
+      background: #0f172a;
+      color: #cbd5e1;
+      padding: 2.5rem 0;
+      margin-top: 3rem;
+      text-align: center;
+      border-top: 1px solid #1e293b;
+    }
+    .footer a {
+      color: #94a3b8;
+      text-decoration: none;
+    }
+    .footer a:hover {
+      color: white;
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        padding: 0 1.2rem;
+      }
+      .hero-content h1 {
+        font-size: 1.8rem;
+      }
+      .top-header {
+        flex-direction: row;
+        flex-wrap: wrap;
+      }
+      .nav-links {
+        gap: 1rem;
+        overflow-x: auto;
+        padding-bottom: 0.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container top-header">
+    <!-- Logo -->
+    <div class="logo-area">
+      <div class="logo-icon"><i class="fas fa-newspaper"></i></div>
+      <div class="logo-text">Express<span>Herald</span></div>
+    </div>
+
+    <!-- TOP HEADER DROPDOWN (custom) -->
+    <div class="dropdown" id="mainDropdown">
+      <button class="dropdown-btn" id="dropdownBtn" aria-haspopup="true" aria-expanded="false">
+        <i class="fas fa-bars"></i> Sections
+        <i class="fas fa-chevron-down"></i>
+      </button>
+      <ul class="dropdown-menu" id="dropdownMenu" role="menu">
+        <li><a href="#" data-section="politics"><i class="fas fa-landmark"></i> Politics</a></li>
+        <li><a href="#" data-section="business"><i class="fas fa-chart-line"></i> Business</a></li>
+        <li><a href="#" data-section="technology"><i class="fas fa-microchip"></i> Technology</a></li>
+        <li><a href="#" data-section="sports"><i class="fas fa-futbol"></i> Sports</a></li>
+        <li><a href="#" data-section="entertainment"><i class="fas fa-film"></i> Entertainment</a></li>
+        <li><a href="#" data-section="world"><i class="fas fa-globe-americas"></i> World News</a></li>
+      </ul>
+    </div>
+
+    <!-- RIGHT SIDE LOGIN ICON: redirects in same window -->
+   <div style="display:flex;justify-content:flex-end;padding:10px">
+<div onclick="h()" style="display:flex;flex-direction:column;align-items:center;font-family:Arial;cursor:pointer">
+<div style="width:50px;height:50px;background:#fff;border-radius:50%;display:flex;justify-content:center;align-items:center;overflow:hidden;box-shadow:0 2px 6px rgba(0,0,0,.2)">
+<span id="i" style="font-size:30px">👤</span>
+<img id="p" style="width:100%;height:100%;object-fit:cover;display:none">
+</div>
+<div id="n" style="margin-top:6px;font-size:13px">Guest</div>
+</div>
+</div>
+<script>
+let s=0,n=document.getElementById("n"),p=document.getElementById("p"),i=document.getElementById("i");
+function u(){try{let d=JSON.parse(sessionStorage.getItem("user"));if(d){s=1;n.innerText=d.name||"User";p.src=d.photo||"";p.style.display="block";i.style.display="none"}else{throw""}}catch(e){s=0;n.innerText="Guest";p.style.display="none";i.style.display="block"}}
+u();
+function h(){s?o():l()}
+function l(){try{let d=JSON.parse(sessionStorage.getItem("user"));d?u():(sessionStorage.setItem("redirectAfterLogin",location.href),location='/signinplease.html')}catch(e){location='/signinplease.html'}}
+function o(){sessionStorage.removeItem("user");u()}
+</script>
+
+
+
+  </div>
+
+  <!-- Main Navigation (news categories) -->
+  <div class="main-nav">
+    <div class="container">
+      <ul class="nav-links">
+        <li><a href="#">Home</a></li>
+        <li><a href="./freePage/Exam/exam1.html">exam1</a></li>
+        <li><a href="./freePage/Exam/exam2.html">exam2</a></li>
+        <li><a href="./freePage/Exam/exam3.html">exam3</a></li>
+        <li><a href="./freePage/Exam/exam4.html">exam4</a></li>
+        <li><a href="./freePage/Exam/exam5.html">exam5</a></li>
+        <li><a href="./freePage/Exam/exam6.html">exam6</a></li>
+        <li><a href="#">Entertainment</a></li>
+        <li><a href="#">Lifestyle</a></li>
+        <li><a href="#">Explained</a></li>
+      </ul>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="container">
+    <!-- Hero Section (Breaking Story) -->
+    <div class="hero">
+      <div class="breaking-badge"><i class="fas fa-bolt"></i> Breaking News</div>
+      <div class="hero-grid">
+        <div class="hero-content">
+          <h1>US special forces rescue downed airman in daring Iran operation</h1>
+          <p>In a high-stakes mission, American commandos extracted a missing F-15 pilot from hostile territory amid escalating West Asia tensions. The rescue involved precision coordination and has drawn international attention.</p>
+          <a href="#" style="color:#d32f2f; font-weight:600;">Read full story →</a>
+        </div>
+        <div class="hero-image">
+          <img src="https://placehold.co/600x400/1e293b/ffffff?text=Breaking+News+Image" alt="Breaking News">
+        </div>
+      </div>
+    </div>
+
+    <!-- Latest News Grid -->
+    <div class="section-title">Latest Headlines</div>
+    <div class="news-grid">
+      <div class="news-card">
+        <img src="https://placehold.co/400x200/334155/f8fafc?text=News" alt="news">
+        <div class="card-content">
+          <div class="card-category">Politics</div>
+          <h3>Assembly elections 2026: Key battlegrounds heat up as campaign intensifies</h3>
+          <p>With polling just weeks away, parties are pulling out all stops in high-stakes contests across four states.</p>
+        </div>
+      </div>
+      <div class="news-card">
+        <img src="https://placehold.co/400x200/334155/f8fafc?text=Tech" alt="tech">
+        <div class="card-content">
+          <div class="card-category">Technology</div>
+          <h3>India's first AI-driven lunar mission set for launch, says ISRO chief</h3>
+          <p>The mission aims to explore the south pole region and demonstrate advanced autonomous navigation.</p>
+        </div>
+      </div>
+      <div class="news-card">
+        <img src="https://placehold.co/400x200/334155/f8fafc?text=Business" alt="business">
+        <div class="card-content">
+          <div class="card-category">Business</div>
+          <h3>Markets rally on positive global cues, Sensex jumps 800 points</h3>
+          <p>Investor sentiment improved after cooling inflation data and robust quarterly earnings from IT majors.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Two column layout: main stories + sidebar -->
+    <div class="two-columns">
+      <div class="main-col">
+        <div class="section-title">Editor's Picks</div>
+        <div class="news-grid" style="grid-template-columns: 1fr 1fr;">
+          <div class="news-card">
+            <img src="https://placehold.co/400x200/2d3748/edf2f7?text=Opinion" alt="opinion">
+            <div class="card-content">
+              <div class="card-category">Opinion</div>
+              <h3>The shifting geopolitics: What India's balancing act means for the region</h3>
+              <p>As global powers realign, New Delhi's nuanced foreign policy faces its toughest test yet.</p>
+            </div>
+          </div>
+          <div class="news-card">
+            <img src="https://placehold.co/400x200/2d3748/edf2f7?text=Explained" alt="explained">
+            <div class="card-content">
+              <div class="card-category">Explained</div>
+              <h3>Why the Strait of Hormuz is the world's most critical oil chokepoint</h3>
+              <p>A simple guide to the narrow passage that influences global energy prices and security.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <aside class="sidebar">
+        <h3>Trending Now</h3>
+        <ul class="sidebar-list">
+          <li><a href="#">▪️ IPL 2026: SRH vs LSG – Live updates and scorecard</a></li>
+          <li><a href="#">▪️ SC refuses to stay new criminal codes, issues notice to Centre</a></li>
+          <li><a href="#">▪️ 68 villages in Gadchiroli declare themselves child marriage-free</a></li>
+          <li><a href="#">▪️ How US special forces pulled off daring rescue in Iran</a></li>
+          <li><a href="#">▪️ Stock market today: Nifty hits record high, banks lead rally</a></li>
+        </ul>
+        <div style="margin-top: 2rem;">
+          <h3>Advertisement</h3>
+          <div style="background:#f1f5f9; height:200px; border-radius:16px; display:flex; align-items:center; justify-content:center; color:#64748b;">Your Ad Here</div>
+        </div>
+      </aside>
+    </div>
+
+    <!-- Another row: World News -->
+    <div class="section-title">World News</div>
+    <div class="news-grid">
+      <div class="news-card">
+        <img src="https://placehold.co/400x200/2c3e50/ecf0f1?text=World" alt="world">
+        <div class="card-content">
+          <div class="card-category">Middle East</div>
+          <h3>Iran rejects 48-hour Hormuz ultimatum, calls US demands 'unbalanced'</h3>
+          <p>Tehran remains defiant as diplomatic efforts stall, raising concerns over energy supplies.</p>
+        </div>
+      </div>
+      <div class="news-card">
+        <img src="https://placehold.co/400x200/2c3e50/ecf0f1?text=Europe" alt="europe">
+        <div class="card-content">
+          <div class="card-category">Europe</div>
+          <h3>EU announces new climate package, aims for 55% emission cut by 2035</h3>
+          <p>The ambitious plan includes carbon border adjustments and green investment incentives.</p>
+        </div>
+      </div>
+      <div class="news-card">
+        <img src="https://placehold.co/400x200/2c3e50/ecf0f1?text=Asia" alt="asia">
+        <div class="card-content">
+          <div class="card-category">Asia Pacific</div>
+          <h3>Quad leaders to meet in Tokyo, focus on maritime security and tech cooperation</h3>
+          <p>The summit aims to strengthen Indo-Pacific alliances amid growing regional challenges.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer class="footer">
+  <div class="container">
+    <p>© 2025 Express Herald — Journalism of Courage. All rights reserved.</p>
+    <p style="margin-top: 0.8rem; font-size: 0.8rem;">
+      <a href="#">About Us</a> | <a href="#">Privacy Policy</a> | <a href="#">Contact</a> | <a href="#">Terms of Use</a>
+    </p>
+  </div>
+</footer>
+
+<script>
+
+const user = JSON.parse(sessionStorage.getItem("user"));
+
+if (user) {
+  document.getElementById("user").innerHTML = `
+    <img src="${user.photo}" width="50"><br>
+    ${user.name}`;
+ 
+} else {
+   sessionStorage.setItem("redirectAfterLogin", window.location.href);
+ // window.location.href = "signinplease.html";
+  
+}
+
+
+
+  (function() {
+    // ---------- DROPDOWN FUNCTIONALITY (top header dropdown) ----------
+    const dropdownContainer = document.getElementById('mainDropdown');
+    const dropdownBtn = document.getElementById('dropdownBtn');
+    const dropdownMenu = document.getElementById('dropdownMenu');
+
+    function closeDropdown() {
+      if (dropdownMenu && dropdownMenu.classList.contains('show')) {
+        dropdownMenu.classList.remove('show');
+        if (dropdownBtn) dropdownBtn.setAttribute('aria-expanded', 'false');
+      }
+    }
+
+    function toggleDropdown(e) {
+      if (!dropdownMenu) return;
+      const isExpanded = dropdownMenu.classList.contains('show');
+      if (isExpanded) {
+        closeDropdown();
+      } else {
+        dropdownMenu.classList.add('show');
+        if (dropdownBtn) dropdownBtn.setAttribute('aria-expanded', 'true');
+      }
+      if (e) e.stopPropagation();
+    }
+
+    if (dropdownBtn) {
+      dropdownBtn.addEventListener('click', toggleDropdown);
+    }
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(event) {
+      if (dropdownContainer && !dropdownContainer.contains(event.target)) {
+        closeDropdown();
+      }
+    });
+
+    // Close on ESC key
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        closeDropdown();
+        if (dropdownBtn) dropdownBtn.focus();
+      }
+    });
+
+    // Handle dropdown links: prevent default and close (demo)
+    const dropdownLinks = document.querySelectorAll('.dropdown-menu a');
+    dropdownLinks.forEach(link => {
+      link.addEventListener('click', function(e) {
+        e.preventDefault();
+        const section = this.innerText.trim();
+        console.log(`[Dropdown] Selected: ${section} — demo navigation`);
+        closeDropdown();
+        // Optional: show a small alert to demonstrate functionality
+        // alert(`You selected: ${section} (demo navigation)`);
+      });
+    });
+
+    // ---------- LOGIN ICON: REDIRECT IN SAME WINDOW (NO NEW TAB) ----------
+    const loginRedirectBtn = document.getElementById('loginRedirectBtn');
+    if (loginRedirectBtn) {
+      // Remove any target attribute to ensure same window
+      loginRedirectBtn.removeAttribute('target');
+      // Override click to guarantee same-tab redirect
+      loginRedirectBtn.addEventListener('click', function(event) {
+        event.preventDefault();
+        const targetUrl = loginRedirectBtn.getAttribute('href');
+        if (targetUrl) {
+          // Redirects in the current window (no new window/tab)
+          window.location.href = targetUrl;
+        } else {
+          window.location.href = '/singinplease.html';
+        }
+      });
+    }
+
+    // Optional: smooth scroll for any anchor links (not needed but good practice)
+    const allLinks = document.querySelectorAll('a[href^="#"]');
+    allLinks.forEach(anchor => {
+      anchor.addEventListener('click', function(e) {
+        const targetId = this.getAttribute('href');
+        if (targetId !== '#' && targetId !== '' && targetId !== '#') {
+          const targetElem = document.querySelector(targetId);
+          if (targetElem) {
+            e.preventDefault();
+            targetElem.scrollIntoView({ behavior: 'smooth' });
+          }
+        }
+      });
+    });
+  })();
+</script>
+</body>
+</html>

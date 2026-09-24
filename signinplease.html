@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login with Firebase (Session Persistence)</title>
+  <style>
+    body {
+      margin: 0;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(120deg, #1e3c72, #2a5298);
+    }
+
+    .card {
+      width: 340px;
+      padding: 35px 25px;
+      border-radius: 18px;
+      background: rgba(255,255,255,0.1);
+      backdrop-filter: blur(15px);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+      text-align: center;
+      color: #fff;
+    }
+
+    .card img {
+      width: 70px;
+      margin-bottom: 15px;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      background: #ffffff;
+      color: #333;
+      font-size: 15px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+
+    input {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+      border-radius: 8px;
+      border: none;
+      box-sizing: border-box;
+    }
+
+    #info {
+      word-break: break-word;
+      background: rgba(0,0,0,0.3);
+      padding: 8px;
+      border-radius: 8px;
+      margin: 10px 0;
+    }
+  </style>
+</head>
+<body>
+
+<div class="card" id="Plogindiv">
+  <img src="https://cdn-icons-png.flaticon.com/512/2991/2991148.png" alt="Login icon">
+  <h2>Sign In</h2>
+  <p>Continue with your Google account</p>
+  <button class="btn" id="loginBtn">Sign in with Google</button>
+</div>
+
+<!-- Vault section – visible for logged-in users (fixed missing quote) -->
+<div class="debug" id="debugmode" style="display:none;">
+
+<h2>🔐 HYBRID SECURE VAULT</h2>
+
+<h3>👤 Profile (RTDB)</h3>
+<input id="name" placeholder="Full name">
+<input id="email" placeholder="Email">
+<button id="saveProfileBtn">Save Profile</button>
+
+<h3>🕶️ Hidden Metadata</h3>
+<input id="ip" placeholder="IP Address (simulated)">
+<input id="device" placeholder="Device info">
+<button id="saveHiddenBtn">Save Hidden</button>
+
+<h3>🔐 Master Password + AES-GCM</h3>
+<input type="password" id="pass" placeholder="Encryption/Decryption passphrase">
+<button id="encryptBtn">Encrypt & Save (RTDB+Firestore)</button>
+<button id="decryptBtn">Decrypt (manual)</button>
+<p id="msg"></p>
+
+<button id="deleteVaultBtn">Delete enc_data</button>
+
+<button id="openPopupBtn" style="margin-top: 12px;">🔓 Open Vault Popup</button>
+
+</div>
+
+<div class="card" id="Clogdiv" style="display:none;">
+  <h3 id="status">not logged</h3>
+  <div id="info"></div>
+  <div id="phoneBox" style="display:none;">
+    <input type="tel" id="phoneInput" placeholder="Enter phone number">
+    <button class="btn" id="savePhoneBtn">Save Phone</button>
+  </div>
+  <input type="password" id="profilepass" placeholder="Enter profile password" oninput="showButton()">
+  <button class="btn" id="backBtn" onclick="checkpass()" style="display:none;">Go Back</button>
+  <button class="btn" id="logoutBtn" style="background:#ff6b6b; color:white;">Sign Out</button>
+  <button onclick="del()">Delete enc_data</button>
+  <button class="btn" id="setprofilepass" onclick="setpass()" style="background:#ff6b6b; color:white;">Set your profile password</button>
+</div>
+
+<!-- Popup overlay (restored fully) -->
+<div id="popupOverlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(240, 186, 186, 0.8); z-index:1000; align-items:center; justify-content:center;">
+  <div style="background:#fff; color:#333; padding:24px; max-width:400px; margin:auto; border:2px solid #000; font-family:monospace;">
+    <h3>🔐 ENCRYPTED VAULT</h3>
+    <p>IndexedDB holds protected data.<br>Enter master password to unlock:</p>
+    <input type="password" id="popupPass" style="width:90%; padding:8px;">
+    <br><br>
+    <button id="popupSubmitBtn">UNLOCK</button>
+    <button id="popupCloseBtn">CLOSE</button>
+    <div id="popupResult" style="margin-top:12px; font-size:0.9rem;"></div>
+  </div>
+</div>
+
+<script type="module">
+  // ======================= FIREBASE IMPORTS (user's external file) =======================
+  import { 
+    auth, 
+    signInWithPopup, 
+    provider, 
+    onAuthStateChanged, 
+    signOut,
+    db,
+    doc,
+    getDoc,
+    setDoc,
+    rtdb, ref, get, set
+  } from './service worker/firebase.js';
+
+  // ======================= DOM ELEMENTS =======================
+  const Plogindiv = document.getElementById("Plogindiv");
+  const Clogdiv = document.getElementById("Clogdiv");
+  const loginBtn = document.getElementById("loginBtn");
+  const logoutBtn = document.getElementById("logoutBtn");
+  const statusEl = document.getElementById("status");
+  const infoEl = document.getElementById("info");
+  const phoneBox = document.getElementById("phoneBox");
+  const phoneInput = document.getElementById("phoneInput");
+  const savePhoneBtn = document.getElementById("savePhoneBtn");
+  const msgEl = document.getElementById("msg");
+  const backBtn = document.getElementById("backBtn");
+  const setProfilePassBtn = document.getElementById("setprofilepass");
+
+  // ======================= INDEXEDDB =======================
+  const DB_NAME = "SecureVault";
+  const DB_VERSION = 1;
+  const STORE_NAME = "store";
+   let password="";
+  let dbInstance = null;
+ let index={};
+  async function openDB() {
+    if (dbInstance) return dbInstance;
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.open(DB_NAME, DB_VERSION);
+      request.onupgradeneeded = (evt) => {
+        const db = evt.target.result;
+        if (!db.objectStoreNames.contains(STORE_NAME)) {
+          db.createObjectStore(STORE_NAME);
+        }
+      };
+      request.onsuccess = (evt) => {
+        dbInstance = evt.target.result;
+        resolve(dbInstance);
+      };
+      request.onerror = (evt) => reject(evt.target.error);
+    });
+  }
+
+  async function storeToIndexedDB(key, value) {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, "readwrite");
+      const store = tx.objectStore(STORE_NAME);
+      const req = store.put(value, key);
+      req.onsuccess = () => resolve();
+      req.onerror = (e) => reject(e.target.error);
+    });
+  }
+
+
+  window.del = async () => {
+  const dbInst = await openDB();
+  const tx = dbInst.transaction("store", "readwrite");
+  const store = tx.objectStore("store");
+
+  const req = store.delete("enc_data");
+
+  req.onsuccess = () => {
+    console.log("enc_data deleted");
+  };
+};
+  async function getFromIndexedDB(key) {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, "readonly");
+      const store = tx.objectStore(STORE_NAME);
+      const req = store.get(key);
+      req.onsuccess = () => resolve(req.result ?? null);
+      req.onerror = (e) => reject(e.target.error);
+    });
+  }
+
+  async function deleteFromIndexedDB(key) {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, "readwrite");
+      const store = tx.objectStore(STORE_NAME);
+      const req = store.delete(key);
+      req.onsuccess = () => resolve();
+      req.onerror = (e) => reject(e.target.error);
+    });
+  }
+
+  async function existsInIndexedDB(key) {
+    const value = await getFromIndexedDB(key);
+    return value !== null && value !== undefined;
+  }
+
+  // ======================= CRYPTO (AES-GCM + PBKDF2) =======================
+
+  const PBKDF2_ITERATIONS = 100000;
+
+async function deriveKey(password, salt) {
+  const enc = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey(
+    "raw", enc.encode(password), "PBKDF2", false, ["deriveKey"]
+  );
+  return crypto.subtle.deriveKey(
+    { name: "PBKDF2", salt: salt, iterations: PBKDF2_ITERATIONS, hash: "SHA-256" },
+    keyMaterial,
+    { name: "AES-GCM", length: 256 },
+    false,
+    ["encrypt", "decrypt"]
+  );
+}
+
+  async function encryptPayload(password, data) {
+   const salt = crypto.getRandomValues(new Uint8Array(16));
+const key = await deriveKey(password, salt);
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const encoded = new TextEncoder().encode(JSON.stringify(data));
+    const encrypted = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, encoded);
+    const encryptedArray = new Uint8Array(encrypted);
+    const base64Data = btoa(String.fromCharCode(...encryptedArray));
+    return {
+  salt: Array.from(salt),
+  iv: Array.from(iv),
+  data: base64Data
+};
+  }
+
+async function decryptPayload(password, encryptedBlob) {
+
+  if (!encryptedBlob.salt) {
+    throw new Error("Old vault format detected. Please re-encrypt your data.");
+  }
+
+  const salt = new Uint8Array(encryptedBlob.salt);
+  const key = await deriveKey(password, salt);
+
+  const iv = new Uint8Array(encryptedBlob.iv);
+  const cipherBytes = Uint8Array.from(atob(encryptedBlob.data), c => c.charCodeAt(0));
+
+  const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, cipherBytes);
+
+  return JSON.parse(new TextDecoder().decode(decrypted));
+}
+
+  // ======================= FIREBASE DATA FETCHERS =======================
+  async function fetchRTDBReadOnlyData(uid) {
+    if (!uid) return null;
+    const snapshot = await get(ref(rtdb, `users/${uid}/readOnlyData`));
+    console.log("sucess rtdb")
+    return snapshot.exists() ? snapshot.val() : null;
+  }
+
+  async function fetchFirestore(l1,l2,cid) {
+     console.log("stroe",l1,l2,cid)
+    const docRef = doc(db,"maindb",l1,l2,cid );
+    console.log("ready stroe",docRef)
+    const snap = await getDoc(docRef);
+     console.log(" stroe",snap)
+    return snap.exists() ? snap.data() : null;
+  }
+
+
+
+  // ======================= VAULT CORE OPERATIONS =======================
+  async function encryptAndStoreVault(keyName, password, combinedPayload) {
+    if (!password || password.trim() === "") {
+      return { success: false, message: "Password cannot be empty" };
+    }
+    try {
+      const encrypted = await encryptPayload(password, combinedPayload);
+      await storeToIndexedDB(keyName, encrypted);
+      return { success: true, message: "Vault encrypted and stored successfully" };
+    } catch (err) {
+      console.error(err);
+      return { success: false, message: `Encryption failed: ${err.message}` };
+    }
+  }
+
+  async function retrieveAndDecryptVault(keyName, password) {
+    if (!password || password.trim() === "") {
+      return { success: false, message: "Password required" };
+    }
+    const encryptedBlob = await getFromIndexedDB(keyName);
+    if (!encryptedBlob) {
+      return { success: false, message: "No encrypted vault found. Run 'Encrypt & Save' first." };
+    }
+    try {
+      const decrypted = await decryptPayload(password, encryptedBlob);
+      return { success: true, data: decrypted };
+    } catch (err) {
+      return { success: false, message: "Decryption failed: wrong password or corrupted data" };
+    }
+  }
+
+  async function deleteVaultEntry(keyName) {
+    try {
+      const exists = await existsInIndexedDB(keyName);
+      if (!exists) return { success: false, message: "No vault entry to delete" };
+      await deleteFromIndexedDB(keyName);
+      return { success: true, message: "Vault entry deleted successfully" };
+    } catch (err) {
+      return { success: false, message: `Delete failed: ${err.message}` };
+    }
+  }
+
+  // ======================= PROFILE & HIDDEN METADATA =======================
+  async function saveUserProfileToRTDB(uid, profileData) {
+    if (!uid) return { success: false, message: "User not authenticated" };
+    try {
+      await set(ref(rtdb, `users/${uid}/profile`), { ...profileData, updatedAt: Date.now() });
+      return { success: true, message: "Profile saved" };
+    } catch (err) {
+      return { success: false, message: `Firebase error: ${err.message}` };
+    }
+  }
+
+  async function saveHiddenMetadataToRTDB(uid, hiddenData) {
+    if (!uid) return { success: false, message: "User not authenticated" };
+    try {
+      await set(ref(rtdb, `users/${uid}/hiddenDataU`), { ...hiddenData, time: Date.now() });
+      return { success: true, message: "Hidden metadata saved" };
+    } catch (err) {
+      return { success: false, message: `Firebase error: ${err.message}` };
+    }
+  }
+
+  // ======================= AUTH HELPERS =======================
+  async function performGoogleLogin() {
+    try {
+      const result = await signInWithPopup(auth, provider);
+      return { success: true, user: result.user };
+    } catch (err) {
+      console.error(err);
+      return { success: false, message: err.message };
+    }
+  }
+
+  async function performLogout() {
+    try {
+      await signOut(auth);
+      return { success: true };
+    } catch (err) {
+      return { success: false, message: err.message };
+    }
+  }
+
+  // ======================= BUTTON VISIBILITY CONTROL =======================
+  async function updateProfileButtons() {
+    const vaultExists = await existsInIndexedDB("enc_data");
+    if (vaultExists) {
+      // Vault exists → show Go Back button, hide Set button
+      if (backBtn) backBtn.style.display = "block";
+      if (setProfilePassBtn) setProfilePassBtn.style.display = "none";
+    } else {
+      // No vault → show Set button, hide Go Back button
+      if (backBtn) backBtn.style.display = "none";
+      if (setProfilePassBtn) setProfilePassBtn.style.display = "block";
+    }
+  }
+
+  // ======================= UI EVENT HANDLERS =======================
+  loginBtn.addEventListener("click", async () => {
+    const result = await performGoogleLogin();
+    if (!result.success) alert(`Login failed: ${result.message}`);
+  });
+
+  logoutBtn.addEventListener("click", async () => {
+    await performLogout();
+  });
+
+  document.getElementById("saveProfileBtn").addEventListener("click", async () => {
+    const user = auth.currentUser;
+    if (!user) { alert("Login required"); return; }
+    const nameInput = document.getElementById("name").value;
+    const emailInput = document.getElementById("email").value;
+    const result = await saveUserProfileToRTDB(user.uid, { name: nameInput, email: emailInput });
+    alert(result.message);
+  });
+
+  document.getElementById("saveHiddenBtn").addEventListener("click", async () => {
+    const user = auth.currentUser;
+    if (!user) { alert("Login required"); return; }
+    const ipVal = document.getElementById("ip").value;
+    const deviceVal = document.getElementById("device").value;
+    const result = await saveHiddenMetadataToRTDB(user.uid, { ip: ipVal, device: deviceVal });
+    alert(result.message);
+  });
+
+  document.getElementById("encryptBtn").addEventListener("click", async () => {
+    const user = auth.currentUser;
+    if (!user) { msgEl.innerText = "❌ Login required before encryption"; return; }
+    const password = document.getElementById("pass").value;
+    if (!password.trim()) { msgEl.innerText = "❌ Set master password first"; return; }
+    msgEl.innerText = "🔄 Fetching data from RTDB & Firestore...";
+    try {
+      const combinedPayload = await buildCombinedVaultPayload(user.uid);
+      const result = await encryptAndStoreVault("enc_data", password, combinedPayload);
+      msgEl.innerText = result.success ? "✅ Encrypted & saved to IndexedDB!" : `❌ ${result.message}`;
+      if (result.success) await updateProfileButtons(); // Refresh button visibility after storing
+    } catch (err) {
+      console.error(err);
+      msgEl.innerText = "❌ Unexpected error during encryption.";
+    }
+  });
+
+  document.getElementById("decryptBtn").addEventListener("click", async () => {
+    const password = document.getElementById("pass").value;
+    if (!password.trim()) { msgEl.innerText = "⚠️ Enter password first!"; return; }
+    const result = await retrieveAndDecryptVault("enc_data", password);
+    if (!result.success) { msgEl.innerText = `❌ ${result.message}`; return; }
+    msgEl.innerText = "🔓 Decrypted! Check alert for details.";
+    alert(`Decrypted Vault Data:\n\n📁 RTDB:\n${JSON.stringify(result.data.rtdb, null, 2)}\n\n🔥 FIRESTORE:\n${JSON.stringify(result.data.firestore, null, 2)}`);
+  });
+
+  document.getElementById("deleteVaultBtn").addEventListener("click", async () => {
+    const result = await deleteVaultEntry("enc_data");
+    if (result.success) {
+      msgEl.innerText = "🗑️ Vault entry deleted.";
+      alert(result.message);
+      await updateProfileButtons(); // Refresh button visibility after deletion
+    } else {
+      msgEl.innerText = `⚠️ ${result.message}`;
+    }
+  });
+
+  // ======================= POPUP LOGIC =======================
+  const popupOverlay = document.getElementById("popupOverlay");
+  const popupPassInput = document.getElementById("popupPass");
+  const popupResultDiv = document.getElementById("popupResult");
+  const popupSubmitBtn = document.getElementById("popupSubmitBtn");
+  const popupCloseBtn = document.getElementById("popupCloseBtn");
+  const openPopupBtn = document.getElementById("openPopupBtn");
+  const profilepassInput = document.getElementById("profilepass");
+
+  function openPopup() {
+    if (!popupOverlay) return;
+    popupOverlay.style.display = "flex";
+    popupPassInput.value = "";
+    popupResultDiv.innerHTML = "";
+  }
+
+  function closePopup() {
+    if (popupOverlay) popupOverlay.style.display = "none";
+  }
+
+  async function unlockVaultViaPopup(password, keyName = "enc_data") {
+    return await retrieveAndDecryptVault(keyName, password);
+  }
+
+  async function onPopupSubmit() {
+    const popupPassword = popupPassInput.value;
+    if (!popupPassword.trim()) {
+      popupResultDiv.innerHTML = "⚠️ Please enter master password";
+      return;
+    }
+    popupResultDiv.innerHTML = "🔍 Unlocking vault...";
+    const result = await unlockVaultViaPopup(popupPassword, "enc_data");
+    if (!result.success) {
+      popupResultDiv.innerHTML = `❌ ${result.message}`;
+      return;
+    }
+    const decryptedData = result.data;
+    popupResultDiv.innerHTML = `
+      <strong>✅ Vault unlocked!</strong><br>
+      <details><summary>📁 RTDB Data</summary><pre style="background:#f0f0f0; padding:8px; overflow:auto;">${JSON.stringify(decryptedData.rtdb, null, 2)}</pre></details>
+      <details><summary>🔥 Firestore Data</summary><pre style="background:#f0f0f0; padding:8px; overflow:auto;">${JSON.stringify(decryptedData.firestore, null, 2)}</pre></details>
+      <button id="closePopupAfterSuccess" style="margin-top:10px;">Close</button>
+    `;
+    const mainPassField = document.getElementById("pass");
+    if (mainPassField) mainPassField.value = popupPassword;
+    if (msgEl) msgEl.innerText = "🔓 Vault unlocked via popup!";
+    const closeSuccessBtn = document.getElementById("closePopupAfterSuccess");
+    if (closeSuccessBtn) closeSuccessBtn.onclick = () => closePopup();
+  }
+
+  openPopupBtn.addEventListener("click", async () => {
+    const vaultExists = await existsInIndexedDB("enc_data");
+    if (!vaultExists) {
+      alert("No encrypted vault found. Please use 'Encrypt & Save' first.");
+      return;
+    }
+    openPopup();
+  });
+
+  popupSubmitBtn.addEventListener("click", onPopupSubmit);
+  popupCloseBtn.addEventListener("click", closePopup);
+  popupPassInput.addEventListener("keypress", (e) => {
+    if (e.key === "Enter") onPopupSubmit();
+  });
+  popupOverlay?.addEventListener("click", (e) => {
+    if (e.target === popupOverlay) closePopup();
+  });
+
+  // ======================= CORE FUNCTIONS FOR PROFILE PASSWORD =======================
+  window.showButton = function() {
+    // This function is called on input; we keep original behaviour: show backBtn? 
+    // But we will rely on updateProfileButtons instead. 
+    // For consistency, we'll still call updateProfileButtons to ensure correct state.
+    updateProfileButtons();
+  };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+function deepcheckarray(oldData, newData) {
+  let changes = {
+    added: [],
+    removed: [],
+    updated: []
+  };
+
+  const oldKeys = Object.keys(oldData || {});
+  const newKeys = Object.keys(newData || {});
+
+  for (let key of newKeys) {
+    if (!oldData.hasOwnProperty(key)) {
+      changes.added.push({ key, value: newData[key] });
+    } else if (JSON.stringify(oldData[key]) !== JSON.stringify(newData[key])) {
+      changes.updated.push({
+        key,
+        old: oldData[key],
+        new: newData[key]
+      });
+    }
+  }
+
+  for (let key of oldKeys) {
+    if (!newData.hasOwnProperty(key)) {
+      changes.removed.push({ key, value: oldData[key] });
+    }
+  }
+
+  console.log("🔍 Changes:", changes);
+  return changes;
+}
+
+async function removec(vv){
+
+
+
+}
+
+async function firestroe(array) {
+  console.log("🔥 Firestore Input:", array);
+
+  try {
+    let promises = array.map(async (yy) => {
+      let parts = yy.key.split("_");
+
+      let state = parts[0];
+      let exam = parts[1];
+      let level = parts[2];
+
+      console.log("📦 Parsed:", state, exam, level);
+
+      try {
+        let data = await fetchFirestore(state, exam, level);
+
+        return {
+          key: yy.key,
+          data
+        };
+
+      } catch (err) {
+        console.error("❌ Fetch failed:", yy.key, err);
+        return null;
+      }
+    });
+
+    let results = await Promise.all(promises);
+
+    results = results.filter(x => x !== null);
+
+    console.log("🔥 Firestore Result:", results);
+
+    return results;
+
+  } catch (err) {
+    console.error("🔥 Firestore function error:", err);
+    return [];
+  }
+}
+
+
+
+function combineData(original, added, updated, removed) {
+  let result = { ...(original || {}) };
+
+  // 🔴 remove
+  for (let i = 0; i < (removed || []).length; i++) {
+    let key = removed[i].key;
+    delete result[key];
+  }
+
+  // 🟡 update
+  for (let i = 0; i < (updated || []).length; i++) {
+    let item = updated[i];
+    result[item.key] = item.new;
+  }
+
+  // 🟢 add
+  for (let i = 0; i < (added || []).length; i++) {
+    let item = added[i];
+    result[item.key] = item.value;
+  }
+
+  return result;
+}
+
+
+
+
+
+async function needupdate(oldrtdb,stroe) {
+  const user = auth.currentUser;
+
+  if (!user) {
+    alert("User not logged in");
+    return;
+  }
+
+  try {
+    const newrtdb = await fetchRTDBReadOnlyData(user.uid);
+    console.log(newrtdb);
+  
+if (newrtdb === null) return null;
+    sessionStorage.setItem("newrtdb", JSON.stringify(newrtdb));
+    if (JSON.stringify(oldrtdb) !== JSON.stringify(newrtdb)) {
+      console.log("✅ Update needed");
+        console.log(oldrtdb,newrtdb );
+      let diff=deepcheckarray(oldrtdb,newrtdb);
+      console.log(diff.added);
+       console.log(diff.removed);
+        console.log(diff.updated);
+
+let ff=[];
+let gg=[];
+let cc=[];
+     if ( diff.added.length > 0) {
+    ff = (await firestroe(diff.added)).map(x => ({
+  key: x.key,
+  value: x.data
+})); }
+
+     if ( diff.removed.length > 0) {
+       cc= diff.removed }
+
+      if ( diff.updated.length > 0) {
+    gg = (await firestroe(diff.updated)).map(x => ({
+  key: x.key,
+  new: x.data
+})); }
+
+
+
+
+let yyyy=combineData(stroe,ff,gg,cc);
+return { rtdb: newrtdb, firestore: yyyy, timestamp: Date.now() };
+    } else {
+      console.log("❌ No update needed");
+    return null;
+    }
+
+  } catch (err) {
+    console.error("Error:", err);
+   return null;
+  }
+}
+
+  window.checkpass = async function() {
+     password = document.getElementById("profilepass").value;
+  
+    if (!password.trim()) {
+      console.error("No password entered");
+      alert("Please enter profile password");
+      return;
+    }
+    try {
+      const exists = await existsInIndexedDB("enc_data");
+      if (!exists) {
+        console.error("Vault does not exist in IndexedDB (enc_data missing)");
+        alert("No encrypted vault found. Please set your profile password first.");
+        return;
+      }
+      const result = await retrieveAndDecryptVault("enc_data", password);
+      if (!result.success) {
+        console.error("Decryption failed:", result.message);
+        alert("Wrong password or corrupted vault");
+        return;
+      }
+  
+      console.log("✅ Vault decrypted successfully. Data:", result.data);
+      // Redirect call is commented out as per original
+         index=result.data;
+  
+      sessionStorage.setItem("pp", password);
+   let ssss = await needupdate(index.rtdb, index.firestore);
+  if (ssss && ssss.rtdb && ssss.firestore) {
+
+      const result = await encryptAndStoreVault("enc_data", password,ssss);
+      if (result.success) {
+        console.log("auto update firestroe ");     }
+         sessionStorage.setItem("index", JSON.stringify(ssss));
+
+    }else{
+
+   sessionStorage.setItem("index", JSON.stringify(index));
+
+    }
+
+      redirectToPrevious();
+    } catch (err) {
+      console.error("Unexpected error during checkpass:", err);
+      alert("An error occurred while accessing the vault");
+    }
+  };
+ 
+  window.setpass = async function() {
+    const user = auth.currentUser;
+    if (!user) {
+      console.error("No user logged in");
+      alert("You must be logged in to set a profile password");
+      return;
+    }
+     password = document.getElementById("profilepass").value;
+    if (!password.trim()) {
+      console.error("Password cannot be empty");
+      alert("Please enter a password in the 'Enter profile password' field");
+      return;
+    }
+    try {
+      console.log("Fetching RTDB readOnlyData and Firestore graduation data...");
+      
+      const uuu = await needupdate([], []);
+      console.log(uuu)
+if (!uuu) {
+  alert("No data found to create vault");
+  return;
+}
+
+
+      //const combinedPayload = await buildCombinedVaultPayload(user.uid);
+      const result = await encryptAndStoreVault("enc_data", password, uuu);
+      if (result.success) {
+        console.log("✅ Vault encrypted and stored successfully with profile password");
+        alert("Profile password set and vault stored successfully!");
+          
+        sessionStorage.setItem("index", JSON.stringify(uuu));
+         sessionStorage.setItem("pp", password);
+        
+       // let index1 = JSON.parse(sessionStorage.getItem("index"));
+      
+        // console.log(index1);
+        const mainPassField = document.getElementById("pass");
+        if (mainPassField) mainPassField.value = password;
+        await updateProfileButtons(); // Refresh button visibility after storing
+      } else {
+        console.error("Encryption failed:", result.message);
+        alert(`Failed to store vault: ${result.message}`);
+      }
+    } catch (err) {
+      console.error("Unexpected error in setpass:", err);
+      alert("An error occurred while setting profile password");
+    }
+  };
+
+  window.redirectToPrevious = function() {
+    const redirectPage = sessionStorage.getItem("redirectAfterLogin");
+
+   
+    if (redirectPage) {
+      sessionStorage.removeItem("redirectAfterLogin");
+      window.location.href = redirectPage;
+    } else {
+      window.location.href = "index.html";
+    }
+  };
+
+  // ======================= ADDITIONAL FUNCTIONS (phone, etc.) =======================
+  async function getClientInfo() {
+    try {
+      const res = await fetch('https://api.ipify.org?format=json');
+      const data = await res.json();
+      const ip = data.ip;
+      const locRes = await fetch(`https://ip-api.com/json/${ip}?fields=status,country,city`);
+      const locData = await locRes.json();
+      const address = locData.status === 'success' ? `${locData.city}, ${locData.country}` : 'Unknown';
+      return { ip, address };
+    } catch (err) {
+      console.warn("Could not fetch IP info:", err);
+      return { ip: "unknown", address: "unknown" };
+    }
+  }
+
+  async function saveUserData(user, phoneNumber) {
+    const userRef = doc(db, "users", user.uid);
+    const clientInfo = await getClientInfo();
+    await setDoc(userRef, {
+      phone: phoneNumber,
+      ip: clientInfo.ip,
+      address: clientInfo.address,
+      lastLogin: new Date().toISOString()
+    }, { merge: true });
+  }
+
+  async function checkAndHandlePhone(user) {
+    const userRef = doc(db, "users", user.uid);
+    const snap = await getDoc(userRef);
+    if (!snap.exists() || !snap.data().phone) {
+      phoneBox.style.display = "block";
+      infoEl.innerHTML = "Please add your phone number.";
+    } else {
+      infoEl.innerHTML = `📞 Phone: ${snap.data().phone}<br>📍 Last IP: ${snap.data().ip || 'N/A'}`;
+      phoneBox.style.display = "none";
+    }
+  }
+
+  let currentUser = null;
+
+  savePhoneBtn.onclick = async () => {
+    const phone = phoneInput.value.trim();
+    if (!phone) {
+      alert("Please enter a phone number.");
+      return;
+    }
+    if (!currentUser) return;
+    await saveUserData(currentUser, phone);
+    alert("Phone number saved!");
+    phoneBox.style.display = "none";
+    infoEl.innerHTML = `📞 Phone: ${phone}<br>✅ Saved successfully.`;
+  };
+
+  // MAIN AUTH STATE HANDLER (manages login/logout UI + phone box + button visibility)
+onAuthStateChanged(auth, async (user) => {
+  if (user) {
+    currentUser = user;
+
+    Plogindiv.style.display = "none";
+    Clogdiv.style.display = "block";
+
+    statusEl.innerText = `✅ Logged in as ${user.displayName || user.email}`;
+
+    try {
+      await checkAndHandlePhone(user);
+      await updateProfileButtons();
+    } catch (e) {
+      console.log("post-login error:", e);
+    }
+
+  } else {
+    currentUser = null;
+
+    Plogindiv.style.display = "block";
+    Clogdiv.style.display = "none";
+
+    statusEl.innerText = "";
+    if (infoEl) infoEl.innerHTML = "";
+
+    phoneBox.style.display = "none";
+    phoneInput.value = "";
+  }
+});
+</script>
+</body>
+</html>
