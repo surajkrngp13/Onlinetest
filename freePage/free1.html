@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Nexus | Fast & Responsive Homepage</title>
+  <style>
+    /* ----- RESET & GLOBAL ----- */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background: #ffffff;
+      color: #1a1f2e;
+      line-height: 1.5;
+      scroll-behavior: smooth;
+    }
+
+    /* ----- UTILITIES ----- */
+    .container {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 0 1.5rem;
+    }
+
+    /* ----- HEADER (sticky, clean) ----- */
+    .site-header {
+      background: #ffffff;
+      box-shadow: 0 1px 0 rgba(0, 0, 0, 0.05);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(0px);
+    }
+
+    .header-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+      padding: 0.9rem 0;
+    }
+
+    /* Logo */
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 800;
+      font-size: 1.4rem;
+      letter-spacing: -0.3px;
+      color: #0a2b3e;
+    }
+    .logo i {
+      font-size: 1.6rem;
+      color: #e11d48;
+    }
+
+    /* DROPDOWN (custom, lightweight) */
+    .dropdown {
+      position: relative;
+    }
+    .dropdown-btn {
+      background: #f1f5f9;
+      border: none;
+      padding: 0.5rem 1.1rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      border-radius: 60px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: inherit;
+      transition: 0.2s;
+      color: #1e293b;
+    }
+    .dropdown-btn:hover {
+      background: #e6edf4;
+    }
+    .dropdown-menu {
+      position: absolute;
+      top: calc(100% + 8px);
+      left: 0;
+      background: #ffffff;
+      min-width: 200px;
+      border-radius: 20px;
+      box-shadow: 0 20px 35px -12px rgba(0, 0, 0, 0.15);
+      list-style: none;
+      padding: 0.5rem 0;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(-10px);
+      transition: 0.2s ease;
+      z-index: 150;
+    }
+    .dropdown-menu.show {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+    }
+    .dropdown-menu li a {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0.7rem 1.4rem;
+      text-decoration: none;
+      color: #1f2a44;
+      font-size: 0.85rem;
+      font-weight: 500;
+      transition: background 0.15s;
+    }
+    .dropdown-menu li a i {
+      width: 1.2rem;
+      color: #e11d48;
+    }
+    .dropdown-menu li a:hover {
+      background: #fff1f2;
+      color: #be123c;
+    }
+
+    /* LOGIN ICON (right side) */
+    .login-area {
+      margin-left: auto;
+    }
+    .login-link {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 40px;
+      padding: 0.45rem 1.1rem;
+      font-weight: 600;
+      font-size: 0.85rem;
+      color: #1e293b;
+      text-decoration: none;
+      transition: 0.2s;
+    }
+    .login-link i {
+      font-size: 1rem;
+      color: #e11d48;
+    }
+    .login-link:hover {
+      background: #fff1f2;
+      border-color: #fecdd3;
+    }
+
+    /* Main Navigation (responsive) */
+    .main-nav {
+      border-top: 1px solid #eef2f6;
+      border-bottom: 1px solid #eef2f6;
+      background: #fff;
+    }
+    .nav-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.5rem;
+      padding: 0.7rem 0;
+      list-style: none;
+    }
+    .nav-links a {
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 0.85rem;
+      color: #334155;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover {
+      color: #e11d48;
+    }
+
+    /* HERO SECTION */
+    .hero {
+      margin: 2rem 0 1.5rem;
+    }
+    .hero-badge {
+      background: #e11d48;
+      color: white;
+      display: inline-block;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 0.2rem 0.9rem;
+      border-radius: 30px;
+      margin-bottom: 1rem;
+    }
+    .hero h1 {
+      font-size: 2rem;
+      font-weight: 800;
+      line-height: 1.2;
+      margin-bottom: 0.8rem;
+      letter-spacing: -0.02em;
+    }
+    .hero p {
+      color: #475569;
+      max-width: 600px;
+      margin-bottom: 1.2rem;
+    }
+    .hero-image {
+      border-radius: 24px;
+      overflow: hidden;
+      background: #f1f5f9;
+      margin-top: 1rem;
+    }
+    .hero-image img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    /* Features Grid */
+    .section-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin: 2rem 0 1.2rem;
+      border-left: 4px solid #e11d48;
+      padding-left: 1rem;
+    }
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    .card {
+      background: #ffffff;
+      border-radius: 24px;
+      padding: 1.3rem;
+      border: 1px solid #eef2f8;
+      transition: 0.2s;
+    }
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 24px -12px rgba(0, 0, 0, 0.08);
+    }
+    .card i {
+      font-size: 1.8rem;
+      color: #e11d48;
+      margin-bottom: 0.8rem;
+    }
+    .card h3 {
+      font-size: 1.2rem;
+      margin-bottom: 0.4rem;
+    }
+    .card p {
+      color: #4b5563;
+      font-size: 0.9rem;
+    }
+
+    /* Two column layout */
+    .two-cols {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 2rem;
+      margin: 2rem 0;
+    }
+    .main-col {
+      flex: 2;
+      min-width: 240px;
+    }
+    .sidebar {
+      flex: 1;
+      background: #fafcff;
+      border-radius: 24px;
+      padding: 1.2rem;
+      border: 1px solid #eef2f6;
+    }
+    .sidebar h3 {
+      font-size: 1.2rem;
+      margin-bottom: 1rem;
+      border-bottom: 2px solid #e11d48;
+      display: inline-block;
+    }
+    .sidebar-list {
+      list-style: none;
+    }
+    .sidebar-list li {
+      padding: 0.7rem 0;
+      border-bottom: 1px solid #eef2f6;
+    }
+    .sidebar-list a {
+      text-decoration: none;
+      color: #1e293b;
+      font-weight: 500;
+      font-size: 0.9rem;
+    }
+    .sidebar-list a:hover {
+      color: #e11d48;
+    }
+
+    /* Footer */
+    .footer {
+      background: #0f172a;
+      color: #cbd5e1;
+      text-align: center;
+      padding: 1.8rem 0;
+      margin-top: 2rem;
+      font-size: 0.8rem;
+    }
+
+    /* Responsive: mobile */
+    @media (max-width: 680px) {
+      .container {
+        padding: 0 1rem;
+      }
+      .header-inner {
+        flex-wrap: wrap;
+        row-gap: 0.8rem;
+      }
+      .login-area {
+        margin-left: 0;
+      }
+      .hero h1 {
+        font-size: 1.6rem;
+      }
+      .nav-links {
+        gap: 1rem;
+        overflow-x: auto;
+        padding-bottom: 0.3rem;
+        white-space: nowrap;
+        flex-wrap: nowrap;
+      }
+      .dropdown-btn {
+        padding: 0.4rem 1rem;
+        font-size: 0.8rem;
+      }
+    }
+
+    /* large screens */
+    @media (min-width: 1400px) {
+      .container {
+        max-width: 1400px;
+      }
+      .hero h1 {
+        font-size: 2.8rem;
+      }
+    }
+
+    /* lightweight images: placeholder with minimal impact */
+    .img-placeholder {
+      background: #e2e8f0;
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #64748b;
+      font-size: 0.8rem;
+      min-height: 200px;
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container header-inner">
+    <!-- Logo -->
+    <div class="logo">
+      <i class="fas fa-bolt"></i> 
+      <span>Nexus<span style="font-weight:500;">Flow</span></span>
+    </div>
+
+    <!-- DROPDOWN (top header) -->
+    <div class="dropdown" id="mainDropdown">
+      <button class="dropdown-btn" id="dropdownBtn" aria-haspopup="true" aria-expanded="false">
+        <i class="fas fa-compass"></i> Explore
+        <i class="fas fa-chevron-down"></i>
+      </button>
+      <ul class="dropdown-menu" id="dropdownMenu" role="menu">
+        <li><a href="#" data-item="dashboard"><i class="fas fa-chart-line"></i> Dashboard</a></li>
+        <li><a href="#" data-item="insights"><i class="fas fa-lightbulb"></i> Insights</a></li>
+        <li><a href="#" data-item="community"><i class="fas fa-users"></i> Community</a></li>
+        <li><a href="#" data-item="pricing"><i class="fas fa-tag"></i> Pricing</a></li>
+        <li><a href="#" data-item="support"><i class="fas fa-headset"></i> Support</a></li>
+      </ul>
+    </div>
+
+    <!-- RIGHT SIDE LOGIN ICON (redirect same window) -->
+   <div style="display:flex;justify-content:flex-end;padding:10px">
+<div onclick="h()" style="display:flex;flex-direction:column;align-items:center;font-family:Arial;cursor:pointer">
+<div style="width:50px;height:50px;background:#fff;border-radius:50%;display:flex;justify-content:center;align-items:center;overflow:hidden;box-shadow:0 2px 6px rgba(0,0,0,.2)">
+<span id="i" style="font-size:30px">👤</span>
+<img id="p" style="width:100%;height:100%;object-fit:cover;display:none">
+</div>
+<div id="n" style="margin-top:6px;font-size:13px">Guest</div>
+</div>
+</div>
+<script>
+let s=0,n=document.getElementById("n"),p=document.getElementById("p"),i=document.getElementById("i");
+function u(){try{let d=JSON.parse(sessionStorage.getItem("user"));if(d){s=1;n.innerText=d.name||"User";p.src=d.photo||"";p.style.display="block";i.style.display="none"}else{throw""}}catch(e){s=0;n.innerText="Guest";p.style.display="none";i.style.display="block"}}
+u();
+function h(){s?o():l()}
+function l(){try{let d=JSON.parse(sessionStorage.getItem("user"));d?u():(sessionStorage.setItem("redirectAfterLogin",location.href),location='/signinplease.html')}catch(e){location='/signinplease.html'}}
+function o(){sessionStorage.removeItem("user");u()}
+</script>
+
+
+
+
+
+
+
+
+  </div>
+
+  <!-- Main navigation (responsive) -->
+  <div class="main-nav">
+    <div class="container">
+      <ul class="nav-links">
+        <li><a href="#">Home</a></li>
+        <li><a href="/BSSCINTERLVEL.html">BSSCINTERLVEL</a></li>
+        <li><a href="#">Solutions</a></li>
+        <li><a href="#">Resources</a></li>
+        <li><a href="#">Company</a></li>
+      </ul>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="container">
+    <!-- Hero Section -->
+    <div class="hero">
+      <div class="hero-badge"><i class="fas fa-bolt"></i> Introducing Edge AI</div>
+      <h1>Build faster, smarter,<br> and future-ready.</h1>
+      <p>Lightning-fast platform with real-time insights. Experience the next generation of digital workflows.</p>
+      <div class="hero-image">
+        <div class="img-placeholder" style="min-height: 200px; background: #f1f5f9; display: flex; align-items: center; justify-content: center; border-radius: 24px;">
+          <span>🎯 Hero visual (lightweight)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Features Grid -->
+    <div class="section-title">Why choose NexusFlow</div>
+    <div class="features-grid">
+      <div class="card">
+        <i class="fas fa-rocket"></i>
+        <h3>Blazing fast</h3>
+        <p>Optimized for speed on any device — mobile, tablet, or desktop.</p>
+      </div>
+      <div class="card">
+        <i class="fas fa-mobile-alt"></i>
+        <h3>Fully responsive</h3>
+        <p>Fluid layout that adapts to every screen size without compromise.</p>
+      </div>
+      <div class="card">
+        <i class="fas fa-shield-alt"></i>
+        <h3>Privacy first</h3>
+        <p>Enterprise-grade security with zero bloat. Your data stays yours.</p>
+      </div>
+    </div>
+
+    <!-- Two column layout (main + sidebar) -->
+    <div class="two-cols">
+      <div class="main-col">
+        <div class="section-title" style="margin-top:0;">Latest updates</div>
+        <div class="features-grid" style="grid-template-columns: 1fr; gap: 1rem;">
+          <div class="card" style="padding: 1rem;">
+            <h3>📢 New AI-powered analytics dashboard</h3>
+            <p>Get real-time insights with our new machine learning models — now live.</p>
+          </div>
+          <div class="card" style="padding: 1rem;">
+            <h3>⚡ Improved performance across all devices</h3>
+            <p>Page loads are now 40% faster on mobile networks.</p>
+          </div>
+          <div class="card" style="padding: 1rem;">
+            <h3>🔒 Enhanced security compliance</h3>
+            <p>ISO 27001 certified infrastructure ensures peace of mind.</p>
+          </div>
+        </div>
+      </div>
+      <aside class="sidebar">
+        <h3>Trending</h3>
+        <ul class="sidebar-list">
+          <li><a href="#">How to scale your startup in 2026</a></li>
+          <li><a href="#">The future of edge computing</a></li>
+          <li><a href="#">Top 10 UI/UX trends this year</a></li>
+          <li><a href="#">Why responsiveness matters for SEO</a></li>
+        </ul>
+        <div style="margin-top: 1.5rem;">
+          <div class="img-placeholder" style="min-height: 160px; background:#eef2ff; border-radius: 20px; display: flex; align-items: center; justify-content: center;">📢 Ad space</div>
+        </div>
+      </aside>
+    </div>
+  </div>
+</main>
+
+<footer class="footer">
+  <div class="container">
+    <p>© 2025 NexusFlow — Lightweight, responsive, and built for speed.</p>
+    <p style="margin-top: 0.5rem; font-size: 0.7rem;">⚡ No heavy frameworks — pure vanilla performance</p>
+  </div>
+</footer>
+
+<!-- Font Awesome (lightweight CDN, but only icons used) -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+<script>
+
+const user = JSON.parse(sessionStorage.getItem("user"));
+
+if (user) {
+  document.getElementById("user").innerHTML = `
+    <img src="${user.photo}" width="50"><br>`;   //${user.name}
+} else {
+   sessionStorage.setItem("redirectAfterLogin", window.location.href);
+ // window.location.href = "signinplease.html";
+  
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  (function() {
+    // ---------- DROPDOWN LOGIC (lightweight, accessible) ----------
+    const dropdownContainer = document.getElementById('mainDropdown');
+    const dropdownBtn = document.getElementById('dropdownBtn');
+    const dropdownMenu = document.getElementById('dropdownMenu');
+
+    function closeDropdown() {
+      if (dropdownMenu && dropdownMenu.classList.contains('show')) {
+        dropdownMenu.classList.remove('show');
+        if (dropdownBtn) dropdownBtn.setAttribute('aria-expanded', 'false');
+      }
+    }
+
+    function toggleDropdown(e) {
+      if (!dropdownMenu) return;
+      const isOpen = dropdownMenu.classList.contains('show');
+      if (isOpen) {
+        closeDropdown();
+      } else {
+        dropdownMenu.classList.add('show');
+        if (dropdownBtn) dropdownBtn.setAttribute('aria-expanded', 'true');
+      }
+      if (e) e.stopPropagation();
+    }
+
+    if (dropdownBtn) {
+      dropdownBtn.addEventListener('click', toggleDropdown);
+    }
+
+    // close on outside click
+    document.addEventListener('click', function(event) {
+      if (dropdownContainer && !dropdownContainer.contains(event.target)) {
+        closeDropdown();
+      }
+    });
+
+    // ESC key closes dropdown
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        closeDropdown();
+        if (dropdownBtn) dropdownBtn.focus();
+      }
+    });
+
+    // handle dropdown links (prevent default, just demo)
+    const dropdownLinks = document.querySelectorAll('.dropdown-menu a');
+    dropdownLinks.forEach(link => {
+      link.addEventListener('click', function(e) {
+        e.preventDefault();
+        const section = this.innerText.trim();
+        console.log(`[Dropdown] selected: ${section}`);
+        closeDropdown();
+        // optional: could show a small feedback but not needed
+      });
+    });
+
+    // ---------- LOGIN ICON: REDIRECT SAME WINDOW (NO NEW TAB) ----------
+    const loginRedirect = document.getElementById('loginRedirectBtn');
+    if (loginRedirect) {
+      // ensure no target="_blank"
+      loginRedirect.removeAttribute('target');
+      loginRedirect.addEventListener('click', function(event) {
+        event.preventDefault();
+        const url = loginRedirect.getAttribute('href');
+        if (url) {
+          window.location.href = url;  // redirects in same window
+        } else {
+          window.location.href = 'https://www.example.com/login';
+        }
+      });
+    }
+
+    // small resize handling: close dropdown on window resize (good UX)
+    window.addEventListener('resize', function() {
+      closeDropdown();
+    });
+  })();
+</script>
+</body>
+</html>
